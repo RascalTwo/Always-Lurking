@@ -30,7 +30,7 @@ setupRoutes(app);
   if (missingUIDs.length) {
     console.log(`[Startup] ${missingUIDs.length} UIDs missing from ${missingUIDs}`);
     for (const user of (await getUsers({ login: usernames })).data.data) {
-      TwitchLookups.update(user.login, user.id);
+      TwitchLookups.update(user.login, user.id.toString());
     }
     await TwitchLookups.save();
   }
@@ -48,7 +48,10 @@ setupRoutes(app);
     }
   }
 
-  console.log('[Startup] Online users:', onlineUIDs);
+  console.log(
+    '[Startup] Online users:',
+    onlineUIDs.map(uid => TwitchLookups.UID_TO_USERNAME[uid]),
+  );
 
   if (!HOSTNAME) {
     console.log(`[Startup] HOSTNAME missing, ignoring subscriptions`);
@@ -59,16 +62,16 @@ setupRoutes(app);
     console.log(`[Startup] Syncing subscriptions...`);
 
     for (const [i, sub] of [...[...subs.data].entries()].reverse()) {
-      let deleteReasons = [''];
+      let deleteReasons = [];
 
-      if (!onlineUIDs.includes(sub.condition.broadcaster_user_id)) deleteReasons.push('No longer monitoring user');
+      if (!uids.includes(sub.condition.broadcaster_user_id)) deleteReasons.push('No longer monitoring user');
       if (!['stream.online', 'stream.offline'].includes(sub.type)) deleteReasons.push('Incorrect subscription type');
       if (!['enabled', 'webhook_callback_verification_pending'].includes(sub.status))
         deleteReasons.push('Subscription failed');
       if (sub.transport.callback !== callbackURL) deleteReasons.push('Outdated Callback URL');
 
       if (!deleteReasons.length) continue;
-      console.log(`[Startup] Deleting ${sub} for ${deleteReasons}`);
+      console.log(`[Startup] Deleting ${JSON.stringify(sub)} for ${deleteReasons.join(', ')}`);
       await deleteSubscription(sub.id);
       subs.data.splice(i, 1);
     }
@@ -81,11 +84,12 @@ setupRoutes(app);
     console.log(`[Startup] ${needSubscriptions.length} subscriptions need creation...`);
 
     for (const { uid, type } of needSubscriptions) {
+      console.log(`[Startup] ${TwitchLookups.UID_TO_USERNAME[uid]} (${uid}) ${type}`);
       await createSubscription({
         version: '1',
         type,
         condition: {
-          broadcaster_user_id: uid,
+          broadcaster_user_id: uid.toString(),
         },
         transport: { callback: callbackURL, method: 'webhook', secret: SUBSCRIPTION_SECRET },
       });
