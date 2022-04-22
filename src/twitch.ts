@@ -50,7 +50,7 @@ interface SubscriptionTransport {
   secret: string;
 }
 
-interface Subscription {
+export interface Subscription {
   id: string;
   status: SubscriptionStatus;
   type: string;

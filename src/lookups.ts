@@ -8,7 +8,7 @@ export class TwitchLookups {
   public static UID_TO_USERNAME: Record<string, string> = {};
   static update(username: string, uid: string) {
     this.USERNAME_TO_UID[username] = uid.toString();
-    this.USERNAME_TO_UID[uid] = username;
+    this.UID_TO_USERNAME[uid] = username;
     this.size++;
   }
   static save() {
@@ -24,7 +24,7 @@ export class TwitchLookups {
         for (const username in data) {
           const uid = data[username];
           this.USERNAME_TO_UID[username] = uid.toString();
-          this.USERNAME_TO_UID[uid] = username;
+          this.UID_TO_USERNAME[uid] = username;
 
           this.size++;
         }

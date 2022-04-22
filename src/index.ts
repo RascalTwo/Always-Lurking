@@ -1,7 +1,6 @@
-import fs from 'fs';
 import express from 'express';
 import expressWs from 'express-ws';
-import { createSubscription, deleteSubscription, getStreams, getSubscriptions, getUsers } from './twitch';
+import { createSubscription, deleteSubscription, getStreams, getSubscriptions, getUsers, Subscription } from './twitch';
 import { GROUPS, loadGroups } from './groups';
 import { HOSTNAME, PORT, SUBSCRIPTION_SECRET } from './constants';
 import { TwitchLookups } from './lookups';
@@ -53,15 +52,18 @@ setupRoutes(app);
     onlineUIDs.map(uid => TwitchLookups.UID_TO_USERNAME[uid]),
   );
 
+  const callbackURL = 'https://' + HOSTNAME + '/api/webhook';
+  const subs: Subscription[] = [];
+
+  const needSubscriptions: { uid: string; type: string }[] = [];
+
   if (!HOSTNAME) {
     console.log(`[Startup] HOSTNAME missing, ignoring subscriptions`);
   } else {
-    const callbackURL = 'https://' + HOSTNAME + '/api/webhook';
+    console.log(`[Startup] Checking subscriptions...`);
+    subs.push(...(await getSubscriptions()).data.data);
 
-    const subs = (await getSubscriptions()).data;
-    console.log(`[Startup] Syncing subscriptions...`);
-
-    for (const [i, sub] of [...[...subs.data].entries()].reverse()) {
+    for (const [i, sub] of [...subs.entries()].reverse()) {
       let deleteReasons = [];
 
       if (!uids.includes(sub.condition.broadcaster_user_id)) deleteReasons.push('No longer monitoring user');
@@ -73,15 +75,24 @@ setupRoutes(app);
       if (!deleteReasons.length) continue;
       console.log(`[Startup] Deleting ${JSON.stringify(sub)} for ${deleteReasons.join(', ')}`);
       await deleteSubscription(sub.id);
-      subs.data.splice(i, 1);
+      subs.splice(i, 1);
     }
-
-    const needSubscriptions = [
-      ...uids.map(uid => ({ uid, type: 'stream.online' })),
-      ...uids.map(uid => ({ uid, type: 'stream.offline' })),
-    ].filter(({ uid, type }) => !subs.data.find(sub => sub.condition.broadcaster_user_id === uid && sub.type === type));
+    needSubscriptions.push(
+      ...[
+        ...uids.map(uid => ({ uid, type: 'stream.online' })),
+        ...uids.map(uid => ({ uid, type: 'stream.offline' })),
+      ].filter(({ uid, type }) => !subs.find(sub => sub.condition.broadcaster_user_id === uid && sub.type === type)),
+    );
 
     console.log(`[Startup] ${needSubscriptions.length} subscriptions need creation...`);
+  }
+
+  console.log('[Startup] Starting server...');
+
+  app.listen(PORT, async () => {
+    console.log(`Listening on port ${PORT}`);
+
+    if (!HOSTNAME) return;
 
     for (const { uid, type } of needSubscriptions) {
       console.log(`[Startup] ${TwitchLookups.UID_TO_USERNAME[uid]} (${uid}) ${type}`);
@@ -94,9 +105,5 @@ setupRoutes(app);
         transport: { callback: callbackURL, method: 'webhook', secret: SUBSCRIPTION_SECRET },
       });
     }
-  }
-
-  console.log('[Startup] Starting server...');
-
-  app.listen(PORT, () => console.log(`Listening on port ${PORT}`));
+  });
 })().catch(console.error);
