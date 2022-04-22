@@ -5,13 +5,13 @@ import { createSubscription, deleteSubscription, getStreams, getSubscriptions, g
 import { GROUPS, loadGroups } from './groups';
 import { HOSTNAME, PORT, SUBSCRIPTION_SECRET } from './constants';
 import { TwitchLookups } from './lookups';
-import router from './routes';
+import setupRoutes from './routes';
 
 const app = expressWs(express()).app;
 app.use(express.json());
 
 app.use(express.static('client/build'));
-app.use(router);
+setupRoutes(app);
 
 (async function startup() {
   console.log('[Startup] Loading groups...');
@@ -35,6 +35,8 @@ app.use(router);
     await TwitchLookups.save();
   }
 
+  const uids = usernames.map(username => TwitchLookups.USERNAME_TO_UID[username]);
+
   console.log('[Startup] Getting currently online users...');
 
   const onlineUIDs: string[] = [];
@@ -45,6 +47,8 @@ app.use(router);
       if (group.members.includes(user_login)) group.online.push(user_login);
     }
   }
+
+  console.log('[Startup] Online users:', onlineUIDs);
 
   if (!HOSTNAME) {
     console.log(`[Startup] HOSTNAME missing, ignoring subscriptions`);
@@ -70,8 +74,8 @@ app.use(router);
     }
 
     const needSubscriptions = [
-      ...onlineUIDs.map(uid => ({ uid, type: 'stream.online' })),
-      ...onlineUIDs.map(uid => ({ uid, type: 'stream.offline' })),
+      ...uids.map(uid => ({ uid, type: 'stream.online' })),
+      ...uids.map(uid => ({ uid, type: 'stream.offline' })),
     ].filter(({ uid, type }) => !subs.data.find(sub => sub.condition.broadcaster_user_id === uid && sub.type === type));
 
     console.log(`[Startup] ${needSubscriptions.length} subscriptions need creation...`);
