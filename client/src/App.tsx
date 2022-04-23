@@ -23,7 +23,7 @@ function App() {
   const [socketUrl, setSocketURL] = useState('');
 
   useEffect(() => {
-    setSocketURL(selectedGroup ? 'ws://localhost:3001/api/ws?group=' + encodeURIComponent(selectedGroup.slug) : '');
+    setSocketURL(selectedGroup ? 'wss://' + window.location.hostname + '/api/ws?group=' + encodeURIComponent(selectedGroup.slug) : '');
   }, [selectedGroup]);
 
   useEffect(() => {
@@ -67,7 +67,7 @@ function App() {
     [readyState],
   );
 
-  const parent = useMemo(() => encodeURIComponent('localhost'), []);
+  const parent = useMemo(() => encodeURIComponent(window.location.hostname), []);
 
   const online = useMemo(() => selectedGroup?.online || [], [selectedGroup]);
 
