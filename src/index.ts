@@ -1,5 +1,6 @@
 import express from 'express';
 import expressWs from 'express-ws';
+import { HOSTNAME, PORT, SUBSCRIPTION_SECRET } from './constants';
 import {
   createSubscription,
   deleteSubscription,
@@ -10,7 +11,6 @@ import {
   Subscription,
 } from './twitch';
 import { GROUPS, loadGroups } from './groups';
-import { HOSTNAME, PORT, SUBSCRIPTION_SECRET } from './constants';
 import { TwitchLookups } from './lookups';
 import setupRoutes from './routes';
 
