@@ -1,6 +1,14 @@
 import express from 'express';
 import expressWs from 'express-ws';
-import { createSubscription, deleteSubscription, getStreams, getSubscriptions, getUsers, Subscription } from './twitch';
+import {
+  createSubscription,
+  deleteSubscription,
+  getStreams,
+  getSubscriptions,
+  getUsers,
+  paginageResults,
+  Subscription,
+} from './twitch';
 import { GROUPS, loadGroups } from './groups';
 import { HOSTNAME, PORT, SUBSCRIPTION_SECRET } from './constants';
 import { TwitchLookups } from './lookups';
@@ -40,10 +48,12 @@ setupRoutes(app);
 
   const onlineUIDs: string[] = [];
 
-  for (const { user_login, user_id } of (await getStreams({ user_login: usernames })).data.data) {
-    onlineUIDs.push(user_id);
-    for (const group of GROUPS) {
-      if (group.members.includes(user_login)) group.online.push(user_login);
+  for (const { data } of await paginageResults(await getStreams({ user_login: usernames }))) {
+    for (const { user_login, user_id } of data) {
+      onlineUIDs.push(user_id);
+      for (const group of GROUPS) {
+        if (group.members.includes(user_login)) group.online.push(user_login);
+      }
     }
   }
 
@@ -61,7 +71,9 @@ setupRoutes(app);
     console.log(`[Startup] HOSTNAME missing, ignoring subscriptions`);
   } else {
     console.log(`[Startup] Checking subscriptions...`);
-    subs.push(...(await getSubscriptions()).data.data);
+    for (const { data } of await paginageResults(await getSubscriptions())) {
+      subs.push(...data);
+    }
 
     for (const [i, sub] of [...subs.entries()].reverse()) {
       let deleteReasons = [];

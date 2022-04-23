@@ -1,10 +1,6 @@
 import axios, { AxiosResponse } from 'axios';
-import url from 'url';
 
-require('dotenv').config();
-
-const URL = 'https://api.twitch.tv/helix' || 'http://localhost:8080/mock';
-const BACKEND_URL = 'https://db5d-76-190-221-237.ngrok.io/';
+const BASE_URL = 'https://api.twitch.tv/helix';
 
 const HEADERS = {
   'Client-Id': process.env.TWITCH_CLIENT_ID!,
@@ -15,7 +11,7 @@ const HEADERS = {
  * {@link https://dev.twitch.tv/docs/api/reference#delete-eventsub-subscription Twitch Docs}
  */
 export function deleteSubscription(id: string) {
-  return axios.delete<any, AxiosResponse<void, any>>(`${URL}/eventsub/subscriptions`, {
+  return axios.delete<any, AxiosResponse<void, any>>(`${BASE_URL}/eventsub/subscriptions`, {
     headers: HEADERS,
     params: { id },
   });
@@ -29,18 +25,20 @@ type SubscriptionStatus =
   | 'authorization_revoked'
   | 'user_removed';
 
-type Pagination = {} | { cursor: string };
+type Pagination = { cursor?: string };
+interface Pageable {
+  pagination: Pagination;
+}
 interface GetSubscriptionParams {
   status?: SubscriptionStatus;
   type?: string;
   after?: string;
 }
 
-interface SubscriptionsResponse {
+interface SubscriptionsResponse extends Pageable {
   total: number;
   total_cost: number;
   max_total_cost: number;
-  pagination: Pagination;
   data: Subscription[];
 }
 
@@ -65,7 +63,7 @@ export interface Subscription {
  * {@link https://dev.twitch.tv/docs/api/reference#get-eventsub-subscriptions Twitch Docs}
  */
 export function getSubscriptions(params?: GetSubscriptionParams) {
-  return axios.get<any, AxiosResponse<SubscriptionsResponse, any>, any>(`${URL}/eventsub/subscriptions`, {
+  return axios.get<any, AxiosResponse<SubscriptionsResponse, any>, any>(`${BASE_URL}/eventsub/subscriptions`, {
     headers: HEADERS,
     params,
   });
@@ -94,7 +92,7 @@ interface User {
  * {@link https://dev.twitch.tv/docs/api/reference#get-users Twitch Docs}
  */
 export function getUsers(params: GetUsersParams) {
-  return axios.get<any, AxiosResponse<{ data: User[] }>>(`${URL}/users`, {
+  return axios.get<any, AxiosResponse<{ data: User[] }>>(`${BASE_URL}/users`, {
     headers: HEADERS,
     params,
   });
@@ -111,7 +109,7 @@ interface CreateSubscriptionParams {
  * {@link https://dev.twitch.tv/docs/api/reference#create-eventsub-subscription Twitch Docs}
  */
 export function createSubscription(params: CreateSubscriptionParams) {
-  return axios.post<any, AxiosResponse<SubscriptionsResponse, any>>(`${URL}/eventsub/subscriptions`, params, {
+  return axios.post<any, AxiosResponse<SubscriptionsResponse, any>>(`${BASE_URL}/eventsub/subscriptions`, params, {
     headers: {
       'Client-Id': process.env.TWITCH_CLIENT_ID!,
       Authorization: `Bearer ${process.env.TWITCH_OAUTH_TOKEN}`!,
@@ -129,7 +127,7 @@ interface GetStreamsParams {
   user_login?: string[];
 }
 
-interface GetStreamsResponse {
+interface GetStreamsResponse extends Pageable {
   data: {
     id: string;
     user_id: string;
@@ -146,12 +144,24 @@ interface GetStreamsResponse {
     tag_ids: string[];
     is_mature: boolean;
   }[];
-  pagnation: Pagination;
 }
 
 /**
  * {@link https://dev.twitch.tv/docs/api/reference#get-streams Twitch Docs}
  */
 export function getStreams(params: GetStreamsParams) {
-  return axios.get<any, AxiosResponse<GetStreamsResponse>>(`${URL}/streams`, { params, headers: HEADERS });
+  return axios.get<any, AxiosResponse<GetStreamsResponse>>(`${BASE_URL}/streams`, { params, headers: HEADERS });
+}
+
+export async function paginageResults<T extends Pageable>(response: AxiosResponse<T>) {
+  const results: T[] = [response.data];
+
+  while (response.data.pagination.cursor) {
+    response = await axios.request({
+      ...response.config,
+      params: { ...response.config.params, after: response.data.pagination.cursor },
+    });
+    results.push(response.data);
+  }
+  return results;
 }
