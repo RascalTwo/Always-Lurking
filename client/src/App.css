@@ -81,3 +81,7 @@ iframe[data-selected="false"] {
 iframe[data-selected="true"] {
   display: block;
 }
+
+details[open] summary {
+  display: none;
+}
