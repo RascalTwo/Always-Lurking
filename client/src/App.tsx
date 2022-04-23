@@ -31,6 +31,15 @@ function App() {
   const [open, setOpen] = useState(!selectedGroup);
   const [selectedChat, setSelectedChat] = useState('');
   const [socketUrl, setSocketURL] = useState('');
+  const [pointWindows, setPointWindows] = useState<Record<string, WindowProxy>>({});
+  useEffect(() => {
+    const listener = () => {
+      Object.values(pointWindows).forEach(w => w?.close());
+      setPointWindows({});
+    };
+    window.addEventListener('beforeunload', listener);
+    return () => window.removeEventListener('beforeunload', listener);
+  }, [pointWindows]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.hash.slice(1));
@@ -92,7 +101,11 @@ function App() {
   const parent = useMemo(() => encodeURIComponent(window.location.hostname), []);
 
   const online = useMemo(() => selectedGroup?.online || [], [selectedGroup]);
-  const displaying = useMemo(() => online.filter(un => !hiddenUsernames.includes(un)), [online, hiddenUsernames]);
+  const displaying = useMemo(
+    () => online.filter(un => !hiddenUsernames.includes(un)),
+    [online, hiddenUsernames, pointWindows],
+  );
+  const players = useMemo(() => displaying.filter(un => !(un in pointWindows)), [displaying]);
 
   return (
     <>
@@ -124,8 +137,8 @@ function App() {
         </fieldset>
       </details>
       <section className="content">
-        <div className="players" data-count={displaying.length}>
-          {displaying.map((username, i) => (
+        <div className="players" data-count={players.length}>
+          {players.map((username, i) => (
             <iframe
               title={username}
               key={username}
@@ -139,21 +152,44 @@ function App() {
           ))}
         </div>
         <div className="chats">
-          <select
-            value={selectedChat}
-            onInput={useCallback(
-              e => {
-                setSelectedChat(e.currentTarget.value);
-              },
-              [setSelectedChat],
-            )}
-            style={selectedChat ? { width: '100%', textAlign: 'center' } : { position: 'absolute', width: '20px' }}
-          >
-            <option value="">None</option>
-            {displaying.map(username => (
-              <option key={username}>{username}</option>
-            ))}
-          </select>
+          <div style={selectedChat ? { width: '100%', textAlign: 'center' } : { position: 'absolute', width: '20px' }}>
+            <select
+              value={selectedChat}
+              onInput={useCallback(
+                e => {
+                  setSelectedChat(e.currentTarget.value);
+                },
+                [setSelectedChat],
+              )}
+            >
+              <option value="">None</option>
+              {displaying.map(username => (
+                <option key={username}>{username}</option>
+              ))}
+            </select>
+            <button
+              onClick={useCallback(() => {
+                setPointWindows(windows => {
+                  if (!(selectedChat in windows))
+                    return {
+                      ...windows,
+                      [selectedChat]: window.open(
+                        `https://player.twitch.tv/?channel=${selectedChat}&enableExtensions=true&muted=true&player=popout&volume=0.0&parent=${parent}`,
+                        `${selectedChat} player`,
+                        'width=1,height=1,dependent=1,alwaysLowered=1,left=10000,top=10000',
+                      )!,
+                    };
+
+                  const newWindows = { ...windows };
+                  newWindows[selectedChat]?.close();
+                  delete newWindows[selectedChat];
+                  return newWindows;
+                });
+              }, [parent, selectedChat])}
+            >
+              Collect Points
+            </button>
+          </div>
           {displaying.map(username => (
             <iframe
               title={username}
