@@ -13,97 +13,77 @@ interface Group {
 }
 
 const SECURE = window.location.protocol.includes('s');
+const TWITCH_PARENT = encodeURIComponent(window.location.hostname);
 
-function App() {
-  const parent = useMemo(() => encodeURIComponent(window.location.hostname), []);
-
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [selectedGroupSlug, selectGroup] = useState<string>(
-    new URLSearchParams(window.location.hash.slice(1)).get('group') || '',
+const useCSA = (initialState: string) => {
+  const [text, setText] = useState(initialState);
+  const array = useMemo(
+    () =>
+      text
+        .split(',')
+        .map(username => username.trim().toLowerCase())
+        .filter(Boolean),
+    [text],
   );
+
+  return { array, setText };
+};
+
+const useHashState = <S extends {}>(defaultValue: S, key: string) => {
+  const hashValue = useMemo(() => new URLSearchParams(window.location.hash.slice(1)).get(key), [key]);
+  const [state, setState] = useState(hashValue === null ? defaultValue : JSON.parse(hashValue));
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    params.set(key, JSON.stringify(state));
+    window.history.pushState(null, '', window.location.pathname + '#' + params.toString());
+  }, [key, state]);
+  return { state, setState };
+};
+
+const useHashedCSA = (defaultValue: string, key: string) => {
+  const hashValue = useMemo(() => new URLSearchParams(window.location.hash.slice(1)).get(key), [key]);
+  const [text, setText] = useState<string>(hashValue || defaultValue);
+  const array = useMemo(
+    () =>
+      text
+        .split(',')
+        .map(username => username.trim().toLowerCase())
+        .filter(Boolean),
+    [text],
+  );
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    params.set(key, text);
+    window.history.pushState(null, '', window.location.pathname + '#' + params.toString());
+  }, [key, text]);
+
+  return { text, array, setText };
+};
+
+const useGroups = () => {
+  const [groups, setGroups] = useState<Group[]>([]);
+  const { state: selectedGroupSlug, setState: selectGroup } = useHashState('', 'group');
   const selectedGroup = useMemo(
     () => groups.find(group => group.slug === selectedGroupSlug),
     [selectedGroupSlug, groups],
   );
-  const [manualGroupText, setManualGroupText] = useState(
-    new URLSearchParams(window.location.hash.slice(1)).get('manual') || '',
-  );
-  const manualUsernames = useMemo(
-    () =>
-      !selectedGroupSlug
-        ? manualGroupText
-            .split(',')
-            .map(username => username.trim().toLowerCase())
-            .filter(Boolean)
-        : [],
-    [selectedGroupSlug, manualGroupText],
-  );
+
   useEffect(() => {
-    const params = new URLSearchParams(window.location.hash.slice(1));
-    params.set('manual', manualUsernames.join(','));
-    window.history.pushState(null, '', window.location.pathname + '#' + params.toString());
-  }, [manualUsernames]);
-  const [hiddenText, setHiddenTest] = useState(new URLSearchParams(window.location.hash.slice(1)).get('hidden') || '');
-  const hiddenUsernames = useMemo(
-    () =>
-      hiddenText
-        .split(',')
-        .map(username => username.trim().toLowerCase())
-        .filter(Boolean),
-    [hiddenText],
-  );
-  const [open, setOpen] = useState(!selectedGroup);
-  const [selectedChat, setSelectedChat] = useState('');
+    fetch('/api/groups')
+      .then(response => response.json())
+      .then(setGroups);
+  }, [setGroups]);
+
+  return { groups, selectedGroup, selectGroup, setGroups };
+};
+
+const useGroupWebsocket = (
+  selectedGroup: Group | undefined,
+  setGroups: React.Dispatch<React.SetStateAction<Group[]>>,
+) => {
   const [socketUrl, setSocketURL] = useState('');
-  const [autocollectPoints, setAutocollectPoints] = useState(
-    new URLSearchParams(window.location.hash.slice(1)).get('points') === 'true',
-  );
-  const [collectingPointUsernames, setCollectingPointUsernames] = useState<string[]>([]);
-  const [pointWindows, setPointWindows] = useState<Record<string, WindowProxy>>({});
-  useEffect(() => {
-    const newUsernames = [];
-    const removingUsernames = [];
-    for (const username of new Set([...Object.keys(pointWindows), ...collectingPointUsernames])) {
-      if (username in pointWindows && !collectingPointUsernames.includes(username)) {
-        removingUsernames.push(username);
-      }
-      if (collectingPointUsernames.includes(username) && !(username in pointWindows)) {
-        newUsernames.push(username);
-      }
-    }
-    console.log({ newUsernames, removingUsernames });
-    if (!removingUsernames.length && !newUsernames.length) return;
-    const newPointWindows = { ...pointWindows };
-    for (const removing of removingUsernames) {
-      newPointWindows[removing]?.close();
-      delete newPointWindows[removing];
-    }
-    for (const adding of newUsernames) {
-      console.log(adding);
-      newPointWindows[adding] = window.open(
-        `https://player.twitch.tv/?channel=${adding}&enableExtensions=true&muted=true&player=popout&volume=0.0&parent=${parent}`,
-        `${adding} player`,
-        'width=1,height=1,dependent=1,alwaysLowered=1,left=10000,top=10000',
-      )!;
-      console.log(newPointWindows[adding]);
-    }
-
-    setPointWindows(newPointWindows);
-  }, [collectingPointUsernames, parent, pointWindows]);
-  useEffect(() => {
-    const listener = () => {
-      Object.values(pointWindows).forEach(w => w?.close());
-      setPointWindows({});
-    };
-    window.addEventListener('beforeunload', listener);
-    return () => window.removeEventListener('beforeunload', listener);
-  }, [pointWindows]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.hash.slice(1));
-    params.set('hidden', hiddenUsernames.join(','));
-    window.history.pushState(null, '', window.location.pathname + '#' + params.toString());
-  }, [hiddenUsernames]);
 
   useEffect(() => {
     setSocketURL(
@@ -111,17 +91,8 @@ function App() {
         ? `ws${SECURE ? 's' : ''}://` + window.location.host + '/api/ws?group=' + encodeURIComponent(selectedGroup.slug)
         : '',
     );
+  }, [selectedGroup]);
 
-    const params = new URLSearchParams(window.location.hash.slice(1));
-    params.set('group', selectedGroupSlug);
-    window.history.pushState(null, '', window.location.pathname + '#' + params.toString());
-  }, [selectedGroupSlug, selectedGroup]);
-
-  useEffect(() => {
-    fetch('/api/groups')
-      .then(response => response.json())
-      .then(setGroups);
-  }, [setGroups]);
   const { readyState, lastJsonMessage } = useWebSocket(socketUrl, {}, !!socketUrl);
 
   useEffect(() => {
@@ -142,7 +113,7 @@ function App() {
         })),
       );
     }
-  }, [lastJsonMessage]);
+  }, [lastJsonMessage, setGroups]);
 
   const connectionStatus = useMemo(
     () =>
@@ -156,24 +127,105 @@ function App() {
     [readyState],
   );
 
-  const online = useMemo(() => selectedGroup?.online || [], [selectedGroup]);
-  const displaying = useMemo(
-    () => (manualUsernames.length ? manualUsernames : online.filter(un => !hiddenUsernames.includes(un))),
-    [online, manualUsernames, hiddenUsernames],
-  );
+  return { connectionStatus };
+};
+
+const usePointCollecting = (displaying: string[]) => {
+  const { state: autocollectPoints, setState: setAutocollectPoints } = useHashState(false, 'points');
+  const [collectingPointUsernames, setCollectingPointUsernames] = useState<string[]>([]);
+  const [pointWindows, setPointWindows] = useState<Record<string, WindowProxy>>({});
+
+  const [check, setCheck] = useState(0);
+  useEffect(() => {
+    const interval = window.setInterval(() => setCheck(Date.now()), 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const removing = [];
+    for (const username in pointWindows) {
+      if (pointWindows[username].closed) removing.push(username);
+    }
+
+    if (!removing.length) return;
+
+    const newPointWindows = { ...pointWindows };
+    for (const username of removing) delete newPointWindows[username];
+    setPointWindows(newPointWindows);
+  }, [pointWindows, check]);
+
+  useEffect(() => {
+    const newUsernames = [];
+    const removingUsernames = [];
+    for (const username of new Set([...Object.keys(pointWindows), ...collectingPointUsernames])) {
+      if (username in pointWindows && !collectingPointUsernames.includes(username)) {
+        removingUsernames.push(username);
+      }
+      if (collectingPointUsernames.includes(username) && !pointWindows[username]) {
+        newUsernames.push(username);
+      }
+    }
+    if (!removingUsernames.length && !newUsernames.length) return;
+    const newPointWindows = { ...pointWindows };
+    for (const removing of removingUsernames) {
+      newPointWindows[removing]?.close();
+      delete newPointWindows[removing];
+    }
+    for (const adding of newUsernames) {
+      newPointWindows[adding] = window.open(
+        `https://player.twitch.tv/?channel=${adding}&enableExtensions=true&muted=true&player=popout&volume=0.0&parent=${TWITCH_PARENT}`,
+        `${adding} player`,
+        'width=1,height=1,dependent=1,alwaysLowered=1,left=10000,top=10000',
+      )!;
+    }
+
+    setPointWindows(newPointWindows);
+  }, [collectingPointUsernames, pointWindows]);
+  useEffect(() => {
+    const listener = () => {
+      Object.values(pointWindows).forEach(w => w?.close());
+      setPointWindows({});
+    };
+    window.addEventListener('beforeunload', listener);
+    return () => window.removeEventListener('beforeunload', listener);
+  }, [pointWindows]);
   useEffect(() => {
     if (!autocollectPoints) return;
     setCollectingPointUsernames(collecting => displaying.filter(un => !collecting.includes(un)));
   }, [autocollectPoints, displaying]);
-  const players = useMemo(() => displaying.filter(un => !(un in pointWindows)), [displaying, pointWindows]);
+
+  return { pointWindows, autocollectPoints, setAutocollectPoints, setCollectingPointUsernames };
+};
+
+function App() {
+  const { groups, selectedGroup, selectGroup, setGroups } = useGroups();
+  const { connectionStatus } = useGroupWebsocket(selectedGroup, setGroups);
+  const [controlsOpen, setControlsOpen] = useState(!selectedGroup);
+
+  const { text: manualGroupText, array: manualUsernames, setText: setManualGroupText } = useHashedCSA('', 'manual');
+  const { text: hiddenText, array: hiddenUsernames, setText: setHiddenTest } = useHashedCSA('', 'hidden');
+
+  const [selectedChat, setSelectedChat] = useState('');
+
+  const onlineUsernames = useMemo(() => selectedGroup?.online || [], [selectedGroup]);
+  const displayingUsernames = useMemo(
+    () => (manualUsernames.length ? manualUsernames : onlineUsernames.filter(un => !hiddenUsernames.includes(un))),
+    [onlineUsernames, manualUsernames, hiddenUsernames],
+  );
+  const { autocollectPoints, setAutocollectPoints, pointWindows, setCollectingPointUsernames } =
+    usePointCollecting(displayingUsernames);
+  const players = useMemo(
+    () => displayingUsernames.filter(un => !pointWindows[un]),
+    [displayingUsernames, pointWindows],
+  );
 
   return (
     <>
-      <details open={open} onToggle={useCallback(e => setOpen(e.currentTarget.open), [])}>
+      <details open={controlsOpen} onToggle={useCallback(e => setControlsOpen(e.currentTarget.open), [])}>
         <summary>Controls</summary>
         <fieldset>
           <legend>
-            <button style={{ all: 'unset' }} onClick={useCallback(() => setOpen(open => !open), [])}>
+            <button style={{ all: 'unset' }} onClick={useCallback(() => setControlsOpen(open => !open), [])}>
               Controls
             </button>
           </legend>
@@ -192,7 +244,7 @@ function App() {
               </option>
             ))}
           </select>
-          {selectedGroupSlug ? (
+          {selectedGroup ? (
             <span>WebSocket: {connectionStatus}</span>
           ) : (
             <input
@@ -226,7 +278,7 @@ function App() {
               style={{ gridArea: String.fromCharCode(97 + i) }}
               src={
                 `https://embed.twitch.tv/?allowfullscreen=true&channel=${username}&layout=video&theme=dark&parent=` +
-                parent
+                TWITCH_PARENT
               }
               allowFullScreen
             />
@@ -244,7 +296,7 @@ function App() {
               )}
             >
               <option value="">None</option>
-              {displaying.map(username => (
+              {displayingUsernames.map(username => (
                 <option key={username}>{username}</option>
               ))}
             </select>
@@ -263,12 +315,12 @@ function App() {
               Collect Points
             </button>
           </div>
-          {displaying.map(username => (
+          {displayingUsernames.map(username => (
             <iframe
               title={username}
               key={username}
               data-selected={selectedChat === username}
-              src={'https://www.twitch.tv/embed/' + username + '/chat?darkpopout&parent=' + parent}
+              src={'https://www.twitch.tv/embed/' + username + '/chat?darkpopout&parent=' + TWITCH_PARENT}
             />
           ))}
         </div>
