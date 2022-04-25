@@ -64,8 +64,8 @@
     "g h i";
 }
 
-.chat {
-  flex: 1;
+.chats {
+  width: 425px;
 }
 
 iframe {
