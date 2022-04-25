@@ -15,6 +15,8 @@ interface Group {
 const SECURE = window.location.protocol.includes('s');
 
 function App() {
+  const parent = useMemo(() => encodeURIComponent(window.location.hostname), []);
+
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupSlug, selectGroup] = useState<string>(
     new URLSearchParams(window.location.hash.slice(1)).get('group') || '',
@@ -53,7 +55,41 @@ function App() {
   const [open, setOpen] = useState(!selectedGroup);
   const [selectedChat, setSelectedChat] = useState('');
   const [socketUrl, setSocketURL] = useState('');
+  const [autocollectPoints, setAutocollectPoints] = useState(
+    new URLSearchParams(window.location.hash.slice(1)).get('points') === 'true',
+  );
+  const [collectingPointUsernames, setCollectingPointUsernames] = useState<string[]>([]);
   const [pointWindows, setPointWindows] = useState<Record<string, WindowProxy>>({});
+  useEffect(() => {
+    const newUsernames = [];
+    const removingUsernames = [];
+    for (const username of new Set([...Object.keys(pointWindows), ...collectingPointUsernames])) {
+      if (username in pointWindows && !collectingPointUsernames.includes(username)) {
+        removingUsernames.push(username);
+      }
+      if (collectingPointUsernames.includes(username) && !(username in pointWindows)) {
+        newUsernames.push(username);
+      }
+    }
+    console.log({ newUsernames, removingUsernames });
+    if (!removingUsernames.length && !newUsernames.length) return;
+    const newPointWindows = { ...pointWindows };
+    for (const removing of removingUsernames) {
+      newPointWindows[removing]?.close();
+      delete newPointWindows[removing];
+    }
+    for (const adding of newUsernames) {
+      console.log(adding);
+      newPointWindows[adding] = window.open(
+        `https://player.twitch.tv/?channel=${adding}&enableExtensions=true&muted=true&player=popout&volume=0.0&parent=${parent}`,
+        `${adding} player`,
+        'width=1,height=1,dependent=1,alwaysLowered=1,left=10000,top=10000',
+      )!;
+      console.log(newPointWindows[adding]);
+    }
+
+    setPointWindows(newPointWindows);
+  }, [collectingPointUsernames, parent, pointWindows]);
   useEffect(() => {
     const listener = () => {
       Object.values(pointWindows).forEach(w => w?.close());
@@ -120,13 +156,15 @@ function App() {
     [readyState],
   );
 
-  const parent = useMemo(() => encodeURIComponent(window.location.hostname), []);
-
   const online = useMemo(() => selectedGroup?.online || [], [selectedGroup]);
   const displaying = useMemo(
     () => (manualUsernames.length ? manualUsernames : online.filter(un => !hiddenUsernames.includes(un))),
     [online, manualUsernames, hiddenUsernames],
   );
+  useEffect(() => {
+    if (!autocollectPoints) return;
+    setCollectingPointUsernames(collecting => displaying.filter(un => !collecting.includes(un)));
+  }, [autocollectPoints, displaying]);
   const players = useMemo(() => displaying.filter(un => !(un in pointWindows)), [displaying, pointWindows]);
 
   return (
@@ -157,10 +195,26 @@ function App() {
           {selectedGroupSlug ? (
             <span>WebSocket: {connectionStatus}</span>
           ) : (
-            <input value={manualGroupText} onChange={e => setManualGroupText(e.currentTarget.value)} placeholder="Manual Usernames" />
+            <input
+              value={manualGroupText}
+              onChange={e => setManualGroupText(e.currentTarget.value)}
+              placeholder="Manual Usernames"
+            />
           )}
 
-          <input value={hiddenText} onChange={useCallback(e => setHiddenTest(e.currentTarget.value), [])} placeholder="Hidden Usernames" />
+          <input
+            value={hiddenText}
+            onChange={useCallback(e => setHiddenTest(e.currentTarget.value), [])}
+            placeholder="Hidden Usernames"
+          />
+          <label>
+            Autocollect Points
+            <input
+              type="checkbox"
+              checked={autocollectPoints}
+              onChange={e => setAutocollectPoints(e.currentTarget.checked)}
+            />
+          </label>
         </fieldset>
       </details>
       <section className="content">
@@ -178,7 +232,7 @@ function App() {
             />
           ))}
         </div>
-        <div className="chats">
+        <div className="chats" data-open={!!selectedChat}>
           <div style={selectedChat ? { width: '100%', textAlign: 'center' } : { position: 'absolute', width: '20px' }}>
             <select
               value={selectedChat}
@@ -195,24 +249,16 @@ function App() {
               ))}
             </select>
             <button
-              onClick={useCallback(() => {
-                setPointWindows(windows => {
-                  if (!(selectedChat in windows))
-                    return {
-                      ...windows,
-                      [selectedChat]: window.open(
-                        `https://player.twitch.tv/?channel=${selectedChat}&enableExtensions=true&muted=true&player=popout&volume=0.0&parent=${parent}`,
-                        `${selectedChat} player`,
-                        'width=1,height=1,dependent=1,alwaysLowered=1,left=10000,top=10000',
-                      )!,
-                    };
-
-                  const newWindows = { ...windows };
-                  newWindows[selectedChat]?.close();
-                  delete newWindows[selectedChat];
-                  return newWindows;
-                });
-              }, [parent, selectedChat])}
+              onClick={useCallback(
+                () =>
+                  selectedChat &&
+                  setCollectingPointUsernames(usernames =>
+                    usernames.includes(selectedChat)
+                      ? usernames.filter(un => un !== selectedChat)
+                      : [...usernames, selectedChat],
+                  ),
+                [selectedChat],
+              )}
             >
               Collect Points
             </button>

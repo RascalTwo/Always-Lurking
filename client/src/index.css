@@ -10,6 +10,7 @@ body {
   height: 95vh;
   width: 95vw;
   margin: auto;
+  overflow: hidden;
 }
 
 code {
