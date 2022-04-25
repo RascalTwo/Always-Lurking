@@ -10,7 +10,7 @@ import {
   paginageResults,
   Subscription,
 } from './twitch';
-import { GROUPS, loadGroups } from './groups';
+import { addOnlineUserToGroup, GROUPS, loadGroups } from './groups';
 import { TwitchLookups } from './lookups';
 import setupRoutes from './routes';
 
@@ -52,7 +52,7 @@ setupRoutes(app);
     for (const { user_login, user_id } of data) {
       onlineUIDs.push(user_id);
       for (const group of GROUPS) {
-        if (group.members.includes(user_login)) group.online.push(user_login);
+        if (group.members.includes(user_login)) addOnlineUserToGroup(group, user_login);
       }
     }
   }
@@ -61,6 +61,7 @@ setupRoutes(app);
     '[Startup] Online users:',
     onlineUIDs.map(uid => TwitchLookups.UID_TO_USERNAME[uid]),
   );
+  for (const group of GROUPS) console.log(`[Startup] ${group.slug} Members Online:`, group.online);
 
   const callbackURL = 'https://' + HOSTNAME + '/api/webhook';
   const subs: Subscription[] = [];

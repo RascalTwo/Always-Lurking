@@ -15,3 +15,8 @@ export async function loadGroups() {
     ),
   );
 }
+
+export function addOnlineUserToGroup(group: Group, username: string){
+  group.online.push(username)
+  group.online.sort((a, b) => group.members.indexOf(a) - group.members.indexOf(b))
+}

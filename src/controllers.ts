@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { WebSocket } from 'ws';
-import { GROUPS } from './groups';
+import { addOnlineUserToGroup, GROUPS } from './groups';
 import { TwitchLookups } from './lookups';
 
 export function getGroups(_: Request, res: Response) {
@@ -44,7 +44,7 @@ export function handleTwitchEventsub(req: Request, res: Response) {
       if (isOnline) {
         for (const group of GROUPS) {
           if (group.members.includes(username)) {
-            group.online.push(username);
+            addOnlineUserToGroup(group, username)
             modifiedGroups.push(group);
           }
         }
