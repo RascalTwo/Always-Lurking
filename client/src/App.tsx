@@ -144,7 +144,7 @@ const usePointCollecting = (displaying: string[]) => {
   useEffect(() => {
     const removing = [];
     for (const username in pointWindows) {
-      if (pointWindows[username].closed) removing.push(username);
+      if (pointWindows[username] === null || pointWindows[username].closed) removing.push(username);
     }
 
     if (!removing.length) return;
