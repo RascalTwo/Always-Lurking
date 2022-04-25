@@ -23,9 +23,31 @@ function App() {
     () => groups.find(group => group.slug === selectedGroupSlug),
     [selectedGroupSlug, groups],
   );
+  const [manualGroupText, setManualGroupText] = useState(
+    new URLSearchParams(window.location.hash.slice(1)).get('manual') || '',
+  );
+  const manualUsernames = useMemo(
+    () =>
+      !selectedGroupSlug
+        ? manualGroupText
+            .split(',')
+            .map(username => username.trim().toLowerCase())
+            .filter(Boolean)
+        : [],
+    [selectedGroupSlug, manualGroupText],
+  );
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    params.set('manual', manualUsernames.join(','));
+    window.history.pushState(null, '', window.location.pathname + '#' + params.toString());
+  }, [manualUsernames]);
   const [hiddenText, setHiddenTest] = useState(new URLSearchParams(window.location.hash.slice(1)).get('hidden') || '');
   const hiddenUsernames = useMemo(
-    () => hiddenText.split(',').map(username => username.trim().toLowerCase()),
+    () =>
+      hiddenText
+        .split(',')
+        .map(username => username.trim().toLowerCase())
+        .filter(Boolean),
     [hiddenText],
   );
   const [open, setOpen] = useState(!selectedGroup);
@@ -57,7 +79,7 @@ function App() {
     const params = new URLSearchParams(window.location.hash.slice(1));
     params.set('group', selectedGroupSlug);
     window.history.pushState(null, '', window.location.pathname + '#' + params.toString());
-  }, [selectedGroup]);
+  }, [selectedGroupSlug, selectedGroup]);
 
   useEffect(() => {
     fetch('/api/groups')
@@ -102,10 +124,10 @@ function App() {
 
   const online = useMemo(() => selectedGroup?.online || [], [selectedGroup]);
   const displaying = useMemo(
-    () => online.filter(un => !hiddenUsernames.includes(un)),
-    [online, hiddenUsernames, pointWindows],
+    () => (manualUsernames.length ? manualUsernames : online.filter(un => !hiddenUsernames.includes(un))),
+    [online, manualUsernames, hiddenUsernames],
   );
-  const players = useMemo(() => displaying.filter(un => !(un in pointWindows)), [displaying]);
+  const players = useMemo(() => displaying.filter(un => !(un in pointWindows)), [displaying, pointWindows]);
 
   return (
     <>
@@ -132,8 +154,13 @@ function App() {
               </option>
             ))}
           </select>
-          <span>WebSocket: {connectionStatus}</span>
-          <input value={hiddenText} onChange={useCallback(e => setHiddenTest(e.currentTarget.value), [])} />
+          {selectedGroupSlug ? (
+            <span>WebSocket: {connectionStatus}</span>
+          ) : (
+            <input value={manualGroupText} onChange={e => setManualGroupText(e.currentTarget.value)} placeholder="Manual Usernames" />
+          )}
+
+          <input value={hiddenText} onChange={useCallback(e => setHiddenTest(e.currentTarget.value), [])} placeholder="Hidden Usernames" />
         </fieldset>
       </details>
       <section className="content">
