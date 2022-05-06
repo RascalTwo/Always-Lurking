@@ -90,6 +90,11 @@ details[open] summary {
   display: none;
 }
 
+summary, legend {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 fieldset {
   display: flex;
   align-items: center;

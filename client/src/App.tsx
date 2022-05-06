@@ -241,7 +241,7 @@ function App() {
         <fieldset>
           <legend>
             <button style={{ all: 'unset' }} onClick={useCallback(() => setControlsOpen(open => !open), [])}>
-              Controls
+            ▼ Controls
             </button>
           </legend>
           <div>
