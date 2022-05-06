@@ -306,36 +306,40 @@ function App() {
           ))}
         </div>
         <div className="chats" data-open={!!selectedChat}>
-          <div style={selectedChat ? { width: '100%', textAlign: 'center' } : { position: 'absolute', width: '20px' }}>
-            <select
-              value={selectedChat}
-              onInput={useCallback(
-                e => {
+          {displayingUsernames.length ? (
+            <div
+              style={
+                selectedChat
+                  ? { width: '100%', textAlign: 'center' }
+                  : { position: 'absolute', width: '20px', right: '75px', top: 0 }
+              }
+            >
+              <select
+                value={selectedChat}
+                onInput={e => {
                   setSelectedChat(e.currentTarget.value);
-                },
-                [setSelectedChat],
-              )}
-            >
-              <option value="">None</option>
-              {displayingUsernames.map(username => (
-                <option key={username}>{username}</option>
-              ))}
-            </select>
-            <button
-              onClick={useCallback(
-                () =>
-                  selectedChat &&
-                  setCollectingPointUsernames(usernames =>
-                    usernames.includes(selectedChat)
-                      ? usernames.filter(un => un !== selectedChat)
-                      : [...usernames, selectedChat],
-                  ),
-                [selectedChat],
-              )}
-            >
-              Collect Points
-            </button>
-          </div>
+                }}
+              >
+                <option value="">None</option>
+                {displayingUsernames.map(username => (
+                  <option key={username}>{username}</option>
+                ))}
+              </select>
+              {selectedChat ? (
+                <button
+                  onClick={() =>
+                    setCollectingPointUsernames(usernames =>
+                      usernames.includes(selectedChat)
+                        ? usernames.filter(un => un !== selectedChat)
+                        : [...usernames, selectedChat],
+                    )
+                  }
+                >
+                  Collect Points
+                </button>
+              ) : null}
+            </div>
+          ) : null}
           {displayingUsernames.map(username => (
             <iframe
               title={username}
