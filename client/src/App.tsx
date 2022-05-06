@@ -244,41 +244,42 @@ function App() {
               Controls
             </button>
           </legend>
-          <select
-            value={selectedGroups.map(group => group.slug)}
-            onChange={e =>
-              selectGroups(
-                Array.from(e.currentTarget.options)
-                  .filter(opt => opt.selected)
-                  .map(opt => opt.value),
-              )
-            }
-            multiple
-          >
-            <option value="" selected>
-              None
-            </option>
-            {groups.map(group => (
-              <option key={group.slug} value={group.slug}>
-                {group.name} {group.members.length}
+          <div>
+            Groups to Watch
+            <select
+              value={selectedGroups.map(group => group.slug)}
+              onChange={e =>
+                selectGroups(
+                  Array.from(e.currentTarget.options)
+                    .filter(opt => opt.selected)
+                    .map(opt => opt.value),
+                )
+              }
+              multiple
+            >
+              <option value="" selected>
+                None
               </option>
-            ))}
-          </select>
-          {selectedGroups.length ? (
-            <span>WebSocket: {connectionStatus}</span>
-          ) : (
+              {groups.map(group => (
+                <option key={group.slug} value={group.slug}>
+                  {group.name} {group.members.length}
+                </option>
+              ))}
+            </select>
+            {selectedGroups.length ? <span>Connection: {connectionStatus}</span> : null}
+          </div>
+          <div>
             <input
               value={manualGroupText}
               onChange={e => setManualGroupText(e.currentTarget.value)}
               placeholder="Manual Usernames"
             />
-          )}
-
-          <input
-            value={hiddenText}
-            onChange={useCallback(e => setHiddenTest(e.currentTarget.value), [])}
-            placeholder="Hidden Usernames"
-          />
+            <input
+              value={hiddenText}
+              onChange={useCallback(e => setHiddenTest(e.currentTarget.value), [])}
+              placeholder="Hidden Usernames"
+            />
+          </div>
           <label>
             Autocollect Points
             <input
