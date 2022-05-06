@@ -5,11 +5,41 @@ import { useEffect } from 'react';
 import { useMemo } from 'react';
 import { useCallback } from 'react';
 
-interface Group {
+interface GroupPayload {
   name: string;
   slug: string;
   members: string[];
   online: string[];
+}
+class Group {
+  name: string;
+  slug: string;
+  members: string[];
+  online: string[];
+  constructor(name: string, slug: string, members: string[], online: string[]) {
+    this.name = name;
+    this.slug = slug;
+    this.members = members;
+    this.online = online;
+  }
+  static from({ name, slug, members, online }: GroupPayload) {
+    return new Group(name, slug, members, online);
+  }
+
+  addOnlineUsername(username: string) {
+    if (!this.members.includes(username) || this.online.includes(username)) return this;
+
+    this.online.push(username);
+    this.online.sort((a, b) => this.members.indexOf(a) - this.members.indexOf(b));
+    return this;
+  }
+
+  removeOnlineUsername(username: string) {
+    const index = this.online.indexOf(username);
+    if (index === -1) return this;
+    this.online.splice(index, 1);
+    return this;
+  }
 }
 
 const SECURE = window.location.protocol.includes('s');
@@ -31,7 +61,7 @@ const useCSA = (initialState: string) => {
 
 const useHashState = <S extends {}>(defaultValue: S, key: string) => {
   const hashValue = useMemo(() => new URLSearchParams(window.location.hash.slice(1)).get(key), [key]);
-  const [state, setState] = useState(hashValue === null ? defaultValue : JSON.parse(hashValue));
+  const [state, setState] = useState<S>(hashValue === null ? defaultValue : JSON.parse(hashValue));
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.hash.slice(1));
@@ -64,54 +94,39 @@ const useHashedCSA = (defaultValue: string, key: string) => {
 
 const useGroups = () => {
   const [groups, setGroups] = useState<Group[]>([]);
-  const { state: selectedGroupSlug, setState: selectGroup } = useHashState('', 'group');
-  const selectedGroup = useMemo(
-    () => groups.find(group => group.slug === selectedGroupSlug),
-    [selectedGroupSlug, groups],
+  const { state: selectedGroupSlugs, setState: selectGroups } = useHashState<string[]>([], 'group');
+  const selectedGroups = useMemo(
+    () => groups.filter(group => selectedGroupSlugs.includes(group.slug)),
+    [selectedGroupSlugs, groups],
   );
 
   useEffect(() => {
     fetch('/api/groups')
       .then(response => response.json())
-      .then(setGroups);
+      .then((groupPayloads: GroupPayload[]) => setGroups(groupPayloads.map(payload => Group.from(payload))));
   }, [setGroups]);
 
-  return { groups, selectedGroup, selectGroup, setGroups };
+  return { groups, selectedGroups, selectGroups, setGroups };
 };
 
-const useGroupWebsocket = (
-  selectedGroup: Group | undefined,
-  setGroups: React.Dispatch<React.SetStateAction<Group[]>>,
-) => {
+const useGroupWebsocket = (selectedGroups: Group[], setGroups: React.Dispatch<React.SetStateAction<Group[]>>) => {
   const [socketUrl, setSocketURL] = useState('');
 
   useEffect(() => {
-    setSocketURL(
-      selectedGroup
-        ? `ws${SECURE ? 's' : ''}://` + window.location.host + '/api/ws?group=' + encodeURIComponent(selectedGroup.slug)
-        : '',
-    );
-  }, [selectedGroup]);
+    if (!selectedGroups.length) return;
+    const url = new URL(`ws${SECURE ? 's' : ''}://` + window.location.host + '/api/ws');
+    for (const group of selectedGroups) url.searchParams.append('group', group.slug);
+    setSocketURL(url.toString());
+  }, [selectedGroups]);
 
   const { readyState, lastJsonMessage } = useWebSocket(socketUrl, {}, !!socketUrl);
 
   useEffect(() => {
     if (!lastJsonMessage) return;
     if (lastJsonMessage.event === 'online') {
-      setGroups(groups =>
-        groups.map(group => {
-          if (!group.members.includes(lastJsonMessage.username) || group.online.includes(lastJsonMessage.username))
-            return group;
-          return { ...group, online: [...group.online, lastJsonMessage.username] };
-        }),
-      );
+      setGroups(groups => groups.map(group => group.addOnlineUsername(lastJsonMessage.username)));
     } else if (lastJsonMessage.event === 'offline') {
-      setGroups(groups =>
-        groups.map(group => ({
-          ...group,
-          online: group.online.filter(username => username !== lastJsonMessage.username),
-        })),
-      );
+      setGroups(groups => groups.map(group => group.removeOnlineUsername(lastJsonMessage.username)));
     }
   }, [lastJsonMessage, setGroups]);
 
@@ -198,16 +213,16 @@ const usePointCollecting = (displaying: string[]) => {
 };
 
 function App() {
-  const { groups, selectedGroup, selectGroup, setGroups } = useGroups();
-  const { connectionStatus } = useGroupWebsocket(selectedGroup, setGroups);
-  const [controlsOpen, setControlsOpen] = useState(!selectedGroup);
+  const { groups, selectedGroups, selectGroups, setGroups } = useGroups();
+  const { connectionStatus } = useGroupWebsocket(selectedGroups, setGroups);
+  const [controlsOpen, setControlsOpen] = useState(!selectedGroups.length);
 
   const { text: manualGroupText, array: manualUsernames, setText: setManualGroupText } = useHashedCSA('', 'manual');
   const { text: hiddenText, array: hiddenUsernames, setText: setHiddenTest } = useHashedCSA('', 'hidden');
 
   const [selectedChat, setSelectedChat] = useState('');
 
-  const onlineUsernames = useMemo(() => selectedGroup?.online || [], [selectedGroup]);
+  const onlineUsernames = useMemo(() => [...new Set(selectedGroups.flatMap(group => group.online))], [selectedGroups]);
   const displayingUsernames = useMemo(
     () => (manualUsernames.length ? manualUsernames : onlineUsernames.filter(un => !hiddenUsernames.includes(un))),
     [onlineUsernames, manualUsernames, hiddenUsernames],
@@ -230,13 +245,18 @@ function App() {
             </button>
           </legend>
           <select
-            value={selectedGroup?.slug || undefined}
+            value={selectedGroups.map(group => group.slug)}
             onChange={e =>
-              selectGroup(groups.find(group => group.slug === e.currentTarget.value) ? e.target.value : '')
+              selectGroups(
+                Array.from(e.currentTarget.options)
+                  .filter(opt => opt.selected)
+                  .map(opt => opt.value),
+              )
             }
+            multiple
           >
             <option value="" selected>
-              Nothing
+              None
             </option>
             {groups.map(group => (
               <option key={group.slug} value={group.slug}>
@@ -244,7 +264,7 @@ function App() {
               </option>
             ))}
           </select>
-          {selectedGroup ? (
+          {selectedGroups.length ? (
             <span>WebSocket: {connectionStatus}</span>
           ) : (
             <input
