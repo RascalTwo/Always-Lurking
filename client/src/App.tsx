@@ -241,7 +241,7 @@ function App() {
         <fieldset>
           <legend>
             <button style={{ all: 'unset' }} onClick={useCallback(() => setControlsOpen(open => !open), [])}>
-            ▼ Controls
+              ▼ Controls
             </button>
           </legend>
           <div>
@@ -266,7 +266,18 @@ function App() {
                 </option>
               ))}
             </select>
-            {selectedGroups.length ? <span>Connection: {connectionStatus}</span> : null}
+            {selectedGroups.length ? (
+              <span
+                style={{
+                  backgroundColor: connectionStatus === 'Open' ? 'lime' : 'red',
+                  color: 'black',
+                  margin: 'auto',
+                  padding: '0.25rem',
+                }}
+              >
+                Connection: {connectionStatus}
+              </span>
+            ) : null}
           </div>
           <div>
             <input
