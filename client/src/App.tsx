@@ -26,12 +26,16 @@ class Group {
     return new Group(name, slug, members, online);
   }
 
+  _sortOnlineUsernames() {
+    this.online.sort((a, b) => this.members.indexOf(a) - this.members.indexOf(b));
+    return this;
+  }
+
   addOnlineUsername(username: string) {
     if (!this.members.includes(username) || this.online.includes(username)) return this;
 
     this.online.push(username);
-    this.online.sort((a, b) => this.members.indexOf(a) - this.members.indexOf(b));
-    return this;
+    return this._sortOnlineUsernames();
   }
 
   removeOnlineUsername(username: string) {
@@ -39,6 +43,12 @@ class Group {
     if (index === -1) return this;
     this.online.splice(index, 1);
     return this;
+  }
+
+  setOnlineUsernames(usernames: string[]) {
+    this.online = usernames;
+
+    return this._sortOnlineUsernames();
   }
 }
 
@@ -127,6 +137,12 @@ const useGroupWebsocket = (selectedGroups: Group[], setGroups: React.Dispatch<Re
       setGroups(groups => groups.map(group => group.addOnlineUsername(lastJsonMessage.username)));
     } else if (lastJsonMessage.event === 'offline') {
       setGroups(groups => groups.map(group => group.removeOnlineUsername(lastJsonMessage.username)));
+    } else if (lastJsonMessage.event === 'sync') {
+      setGroups(groups =>
+        groups.map(group =>
+          group.slug !== lastJsonMessage.group ? group : group.setOnlineUsernames(lastJsonMessage.online),
+        ),
+      );
     }
   }, [lastJsonMessage, setGroups]);
 
