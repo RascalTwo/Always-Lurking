@@ -7,6 +7,7 @@ import {
   createNeededSubscriptions,
   deleteObsoleteSubscriptions,
   discoverOnlineUsernames,
+  outputGroupStates,
   syncUIDCache,
 } from './helpers';
 import { TwitchLookups } from './lookups';
@@ -136,13 +137,15 @@ export function handleTwitchEventsub(req: Request, res: Response) {
       // TODO - return usernames paired with group names and indexes
       if (isOnline) {
         for (const group of GROUPS) {
-          markUserOnline(group, username);
+          if (group.members.includes(username)) markUserOnline(group, username);
         }
       } else {
         for (const group of GROUPS) {
-          markUserOffline(group, username);
+          if (group.members.includes(username)) markUserOffline(group, username);
         }
       }
+
+      outputGroupStates('Twitch Eventsub Notification');
 
       return res.status(204).end();
     case 'webhook_callback_verification':

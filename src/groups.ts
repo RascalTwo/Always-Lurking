@@ -40,11 +40,11 @@ export function markUserOnline(group: Group, username: string) {
 
 export function markUserOffline(group: Group, username: string) {
   if (group.members.includes(username))
-    return console.error(`Tried to mark ${username} offline in ${group.slug} where they are not a member`);
+    return console.error(`Tried to mark ${username} offline in ${group.slug}, but they are not a member`);
 
   const onlineIndex = group.online.indexOf(username);
   if (onlineIndex === -1)
-    return console.error(`Tried to mark ${group.slug} as offline in ${username} before they were online`);
+    return console.error(`Tried to mark ${username} as offline in ${group.slug} before they were online`);
 
   group.online.splice(onlineIndex, 1);
   for (const client of group.clients) {

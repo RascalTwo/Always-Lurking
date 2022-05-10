@@ -12,6 +12,11 @@ import {
 } from './twitch';
 import type { NeededSubscription, ObsoleteSubscription } from './types';
 
+export function outputGroupStates(label: string){
+  console.log(`[${label}] Online users:`, new Set(GROUPS.flatMap(group => group.online)).size);
+  for (const group of GROUPS) console.log(`[${label}] ${group.slug} Members Online:`, group.online);
+}
+
 export async function syncUIDCache(label: string, ...usernames: string[]) {
   console.log(`[${label}] Populating UID cache...`);
   const missingUIDs = usernames.filter(username => !(username in TwitchLookups.USERNAME_TO_UID));
@@ -38,9 +43,6 @@ export async function discoverOnlineUsernames(label: string, ...usernames: strin
       }
     }
   }
-
-  console.log(`[${label}] Online users:`, onlineUsernames);
-  for (const group of GROUPS) console.log(`[${label}] ${group.slug} Members Online:`, group.online);
 }
 
 export async function collectSubscriptionChanges(label: string, ...uids: string[]){

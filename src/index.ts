@@ -11,6 +11,7 @@ import {
   createNeededSubscriptions,
   collectSubscriptionChanges,
   deleteObsoleteSubscriptions,
+  outputGroupStates,
 } from './helpers';
 
 const app = expressWs(express()).app;
@@ -40,6 +41,8 @@ setupRoutes(app);
     ...usernames.map(username => TwitchLookups.USERNAME_TO_UID[username]),
   );
   await deleteObsoleteSubscriptions('Startup', ...obsolete);
+
+  outputGroupStates('Startup');
 
   console.log('[Startup] Starting server...');
 
