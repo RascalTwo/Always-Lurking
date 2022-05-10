@@ -39,7 +39,7 @@ export function markUserOnline(group: Group, username: string) {
 }
 
 export function markUserOffline(group: Group, username: string) {
-  if (group.members.includes(username))
+  if (!group.members.includes(username))
     return console.error(`Tried to mark ${username} offline in ${group.slug}, but they are not a member`);
 
   const onlineIndex = group.online.indexOf(username);
