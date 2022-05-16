@@ -239,6 +239,10 @@ function App() {
     'manualExclusive',
   );
   const { text: hiddenText, array: hiddenUsernames, setText: setHiddenTest } = useHashedCSA('', 'hidden');
+  const { state: autoplay, setState: setAutoplay } = useHashState(
+    true,
+    'autoplay',
+  );
 
   const [selectedChat, setSelectedChat] = useState('');
 
@@ -325,14 +329,24 @@ function App() {
               placeholder="Hidden Usernames"
             />
           </div>
+          <div>
           <label>
-            Autocollect Points
+            Popup
             <input
               type="checkbox"
               checked={autocollectPoints}
               onChange={e => setAutocollectPoints(e.currentTarget.checked)}
             />
           </label>
+          <label>
+            Autoplay
+            <input
+              type="checkbox"
+              checked={autoplay}
+              onChange={e => setAutoplay(e.currentTarget.checked)}
+            />
+          </label>
+          </div>
         </fieldset>
       </details>
       <section className="content">
@@ -343,7 +357,7 @@ function App() {
               key={username}
               style={{ gridArea: String.fromCharCode(97 + i) }}
               src={
-                `https://embed.twitch.tv/?allowfullscreen=true&channel=${username}&layout=video&theme=dark&parent=` +
+                `https://embed.twitch.tv/?allowfullscreen=true&channel=${username}&layout=video&theme=dark&autoplay=${autoplay}&parent=` +
                 TWITCH_PARENT
               }
               allowFullScreen
