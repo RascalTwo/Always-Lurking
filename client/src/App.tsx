@@ -234,14 +234,22 @@ function App() {
   const [controlsOpen, setControlsOpen] = useState(!selectedGroups.length);
 
   const { text: manualGroupText, array: manualUsernames, setText: setManualGroupText } = useHashedCSA('', 'manual');
+  const { state: manualExclusive, setState: setManualAdditiveOrExclusive } = useHashState(
+    false,
+    'manualExclusive',
+  );
   const { text: hiddenText, array: hiddenUsernames, setText: setHiddenTest } = useHashedCSA('', 'hidden');
 
   const [selectedChat, setSelectedChat] = useState('');
 
   const onlineUsernames = useMemo(() => [...new Set(selectedGroups.flatMap(group => group.online))], [selectedGroups]);
+
   const displayingUsernames = useMemo(
-    () => (manualUsernames.length ? manualUsernames : onlineUsernames.filter(un => !hiddenUsernames.includes(un))),
-    [onlineUsernames, manualUsernames, hiddenUsernames],
+    () => {
+      if (manualExclusive && manualUsernames.length) return manualUsernames;
+      return [...new Set([...onlineUsernames.filter(un => !hiddenUsernames.includes(un)), ...manualUsernames])]
+    },
+    [onlineUsernames, manualUsernames, hiddenUsernames, manualExclusive],
   );
   const { autocollectPoints, setAutocollectPoints, pointWindows, setCollectingPointUsernames } =
     usePointCollecting(displayingUsernames);
@@ -296,14 +304,24 @@ function App() {
             ) : null}
           </div>
           <div>
-            <input
-              value={manualGroupText}
-              onChange={e => setManualGroupText(e.currentTarget.value)}
-              placeholder="Manual Usernames"
-            />
+            <div>
+              <input
+                value={manualGroupText}
+                onChange={e => setManualGroupText(e.currentTarget.value)}
+                placeholder="Manual Usernames"
+              />
+              <label>
+                Exclusive
+                <input
+                  type="checkbox"
+                  checked={manualExclusive}
+                  onChange={e => setManualAdditiveOrExclusive(e.currentTarget.checked)}
+                />
+              </label>
+            </div>
             <input
               value={hiddenText}
-              onChange={useCallback(e => setHiddenTest(e.currentTarget.value), [])}
+              onChange={useCallback(e => setHiddenTest(e.currentTarget.value), [setHiddenTest])}
               placeholder="Hidden Usernames"
             />
           </div>
