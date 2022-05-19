@@ -16,9 +16,9 @@ function getGroupsBySlugs(...slugs: string[]) {
   return GROUPS.filter(group => slugs.includes(group.slug));
 }
 
-export function requirePassword(req: Request, res: Response, next: NextFunction){
+export function requirePassword(req: Request, res: Response, next: NextFunction) {
   if (!MODIFY_PASSWORD) return res.send(403).send('Modification not enabled');
-  if (req.query.password !== MODIFY_PASSWORD) return res.status(403).send('Invalid password')
+  if (req.query.password !== MODIFY_PASSWORD) return res.status(403).send('Invalid password');
   return next();
 }
 
@@ -111,7 +111,7 @@ export function handleWS(ws: WebSocket, req: Request) {
     ws.send('Invalid Group Slug');
     return ws.close();
   }
-  for (const group of groups) {
+  for (const [i, group] of groups.entries()) {
     group.clients.push(ws);
     ws.on('close', () => {
       group.clients.splice(group.clients.indexOf(ws), 1);
@@ -119,7 +119,11 @@ export function handleWS(ws: WebSocket, req: Request) {
     });
     console.log(`${group.clients.length}nth ${group.slug} WS Connected`);
 
-    ws.send(JSON.stringify({ event: 'sync', group: group.slug, online: group.online }));
+    setTimeout(
+      group => ws.send(JSON.stringify({ event: 'sync', group: group.slug, online: group.online })),
+      i * 1000,
+      group,
+    );
   }
 }
 
