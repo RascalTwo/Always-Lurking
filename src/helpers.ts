@@ -22,8 +22,10 @@ export async function syncUIDCache(label: string, ...usernames: string[]) {
   const missingUIDs = usernames.filter(username => !(username in TwitchLookups.USERNAME_TO_UID));
   if (missingUIDs.length) {
     console.log(`[${label}] ${missingUIDs.length} UIDs missing from ${missingUIDs}`);
-    for (const user of (await getUsers({ login: usernames })).data.data) {
-      TwitchLookups.update(user.login, user.id.toString());
+    for (let i = 0; i < usernames.length; i += 50) {
+      for (const user of (await getUsers({ login: usernames.slice(i, i + 50) })).data.data) {
+        TwitchLookups.update(user.login, user.id.toString());
+      }
     }
     await TwitchLookups.save();
   }
