@@ -37,11 +37,13 @@ export async function discoverOnlineUsernames(label: string, ...usernames: strin
 
   const onlineUsernames: string[] = [];
 
-  for (const { data } of await paginageResults(await getStreams({ user_login: usernames }))) {
-    for (const { user_login } of data) {
-      onlineUsernames.push(user_login);
-      for (const group of GROUPS) {
-        if (group.members.includes(user_login)) markUserOnline(group, user_login);
+  for (let i = 0; i < usernames.length; i += 50) {
+    for (const { data } of await paginageResults(await getStreams({ user_login: usernames.slice(i, i + 50) }))) {
+      for (const { user_login } of data) {
+        onlineUsernames.push(user_login);
+        for (const group of GROUPS) {
+          if (group.members.includes(user_login)) markUserOnline(group, user_login);
+        }
       }
     }
   }
