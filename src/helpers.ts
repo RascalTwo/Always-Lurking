@@ -12,7 +12,7 @@ import {
 } from './twitch';
 import type { NeededSubscription, ObsoleteSubscription } from './types';
 
-export function outputGroupStates(label: string){
+export function outputGroupStates(label: string) {
   console.log(`[${label}] Online users:`, new Set(GROUPS.flatMap(group => group.online)).size);
   for (const group of GROUPS) console.log(`[${label}] ${group.slug} Members Online:`, group.online);
 }
@@ -47,9 +47,9 @@ export async function discoverOnlineUsernames(label: string, ...usernames: strin
   }
 }
 
-export async function collectSubscriptionChanges(label: string, ...uids: string[]){
-  const obsolete: ObsoleteSubscription[] = []
-  const needed: NeededSubscription[] = []
+export async function collectSubscriptionChanges(label: string, ...uids: string[]) {
+  const obsolete: ObsoleteSubscription[] = [];
+  const needed: NeededSubscription[] = [];
 
   if (!HOSTNAME) {
     console.log(`[${label}] HOSTNAME missing, ignoring subscriptions`);
@@ -70,7 +70,7 @@ export async function collectSubscriptionChanges(label: string, ...uids: string[
         deleteReasons.push('Subscription failed');
       if (sub.transport.callback !== CALLBACK_URL) deleteReasons.push('Outdated Callback URL');
 
-      if (deleteReasons.length) obsolete.push({ subscription: sub, reasons: deleteReasons })
+      if (deleteReasons.length) obsolete.push({ subscription: sub, reasons: deleteReasons });
     }
     needed.push(
       ...[
@@ -86,7 +86,7 @@ export async function collectSubscriptionChanges(label: string, ...uids: string[
   return {
     obsolete,
     needed,
-  }
+  };
 }
 
 export async function createNeededSubscriptions(label: string, ...neededSubscriptions: NeededSubscription[]) {
@@ -105,8 +105,8 @@ export async function createNeededSubscriptions(label: string, ...neededSubscrip
   }
 }
 
-export async function deleteObsoleteSubscriptions(label: string, ...obsoleteSubscriptions: ObsoleteSubscription[]){
-  for (const { subscription, reasons } of obsoleteSubscriptions){
+export async function deleteObsoleteSubscriptions(label: string, ...obsoleteSubscriptions: ObsoleteSubscription[]) {
+  for (const { subscription, reasons } of obsoleteSubscriptions) {
     console.log(`[${label}] Deleting ${JSON.stringify(subscription)} for ${reasons.join(', ')}`);
     await deleteSubscription(subscription.id);
   }
