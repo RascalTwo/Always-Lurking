@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useEffect } from 'react';
 import { useMemo } from 'react';
 import { useCallback } from 'react';
+import Joyride, { ACTIONS, CallBackProps } from 'react-joyride';
 
 interface GroupPayload {
   name: string;
@@ -234,27 +235,18 @@ function App() {
   const [controlsOpen, setControlsOpen] = useState(!selectedGroups.length);
 
   const { text: manualGroupText, array: manualUsernames, setText: setManualGroupText } = useHashedCSA('', 'manual');
-  const { state: manualExclusive, setState: setManualAdditiveOrExclusive } = useHashState(
-    false,
-    'manualExclusive',
-  );
+  const { state: manualExclusive, setState: setManualAdditiveOrExclusive } = useHashState(false, 'manualExclusive');
   const { text: hiddenText, array: hiddenUsernames, setText: setHiddenTest } = useHashedCSA('', 'hidden');
-  const { state: autoplay, setState: setAutoplay } = useHashState(
-    true,
-    'autoplay',
-  );
+  const { state: autoplay, setState: setAutoplay } = useHashState(true, 'autoplay');
 
   const [selectedChat, setSelectedChat] = useState('');
 
   const onlineUsernames = useMemo(() => [...new Set(selectedGroups.flatMap(group => group.online))], [selectedGroups]);
 
-  const displayingUsernames = useMemo(
-    () => {
-      if (manualExclusive && manualUsernames.length) return manualUsernames;
-      return [...new Set([...onlineUsernames.filter(un => !hiddenUsernames.includes(un)), ...manualUsernames])]
-    },
-    [onlineUsernames, manualUsernames, hiddenUsernames, manualExclusive],
-  );
+  const displayingUsernames = useMemo(() => {
+    if (manualExclusive && manualUsernames.length) return manualUsernames;
+    return [...new Set([...onlineUsernames.filter(un => !hiddenUsernames.includes(un)), ...manualUsernames])];
+  }, [onlineUsernames, manualUsernames, hiddenUsernames, manualExclusive]);
   const { autocollectPoints, setAutocollectPoints, pointWindows, setCollectingPointUsernames } =
     usePointCollecting(displayingUsernames);
   const players = useMemo(
@@ -262,8 +254,70 @@ function App() {
     [displayingUsernames, pointWindows],
   );
 
+  const steps = useMemo(
+    () => [
+      {
+        target: 'body',
+        content:
+          'The Twitch stream viewer allows you to never miss a stream from predefined list of these groups of streamers, with customizability to show and hide streamers as you see fit.',
+      },
+      {
+        target: 'fieldset',
+        content: 'Choosing which group(s) to watch and further customizations can be done via the Controls section',
+      },
+      {
+        target: '.players',
+        content: 'You can watch all the selected streamers',
+        placement: 'right',
+      },
+      {
+        target: '.chats select',
+        content:
+          'In addition, choose which chat you wish to participate in - without missing any messages in other chats',
+        placement: 'left',
+      },
+      {
+        target: 'select',
+        content: 'Here you can select which group(s) you want to be watching if any',
+      },
+      {
+        target: 'input[placeholder="Manual Usernames"]',
+        content:
+          'and even add more streamers - separated by commas - you wish to watch not in any of the selected groups',
+      },
+      {
+        target: 'input[placeholder="Manual Usernames"] + label',
+        content: 'making this exclusive instead of additive to the existing streamers if you wish',
+      },
+      {
+        target: 'input[placeholder="Hidden Usernames"]',
+        content: "You can even enter which streamers - separated by commas - you don't want to watch",
+      },
+      {
+        target: 'legend button',
+        content: "finally you can close these controls when you're done with them!",
+      },
+    ],
+    [],
+  );
+
+  const joyrideKey = useMemo(() => 'always-lurking-onboarded' + process.env.REACT_APP_VERSION, []);
+
+  const [onboarding, setOnboarding] = useState(!window.localStorage.getItem(joyrideKey));
+  useEffect(() => {
+    window.localStorage.setItem(joyrideKey, (+onboarding).toString());
+  }, [onboarding, joyrideKey]);
+
+  const onOnboardChange: (props: CallBackProps) => void = props => {
+    if (props.action === ACTIONS.RESET || props.action === ACTIONS.CLOSE) setOnboarding(false);
+  };
+
+  // @ts-ignore
+  const joyride = <Joyride run={onboarding} steps={steps} continuous={true} callback={onOnboardChange} />;
+
   return (
     <>
+      {joyride}
       <details open={controlsOpen} onToggle={useCallback(e => setControlsOpen(e.currentTarget.open), [])}>
         <summary>Controls</summary>
         <fieldset>
@@ -308,6 +362,7 @@ function App() {
             ) : null}
           </div>
           <div>
+            <p>Customize Viewing Streamers</p>
             <div>
               <input
                 value={manualGroupText}
@@ -330,22 +385,19 @@ function App() {
             />
           </div>
           <div>
-          <label>
-            Popup
-            <input
-              type="checkbox"
-              checked={autocollectPoints}
-              onChange={e => setAutocollectPoints(e.currentTarget.checked)}
-            />
-          </label>
-          <label>
-            Autoplay
-            <input
-              type="checkbox"
-              checked={autoplay}
-              onChange={e => setAutoplay(e.currentTarget.checked)}
-            />
-          </label>
+            <label>
+              Popup
+              <input
+                type="checkbox"
+                checked={autocollectPoints}
+                onChange={e => setAutocollectPoints(e.currentTarget.checked)}
+              />
+            </label>
+            <label>
+              Autoplay
+              <input type="checkbox" checked={autoplay} onChange={e => setAutoplay(e.currentTarget.checked)} />
+            </label>
+            <button onClick={() => setOnboarding(true)}>Help</button>
           </div>
         </fieldset>
       </details>
@@ -394,7 +446,7 @@ function App() {
                     )
                   }
                 >
-                  Collect Points
+                  Pop Out
                 </button>
               ) : null}
             </div>
