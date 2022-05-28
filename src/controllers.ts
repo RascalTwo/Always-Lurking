@@ -138,7 +138,6 @@ export function handleTwitchEventsub(req: Request, res: Response) {
       const uid = req.body.event.broadcaster_user_id;
       const username = TwitchLookups.UID_TO_USERNAME[uid];
       console.log(`${username} (${uid}) has went ${event} `);
-      // TODO - return usernames paired with group names and indexes
       if (isOnline) {
         for (const group of GROUPS) {
           if (group.members.includes(username)) markUserOnline(group, username);
