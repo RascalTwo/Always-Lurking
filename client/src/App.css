@@ -70,8 +70,20 @@
   width: 425px;
 }
 
+.chats[data-open="true"] > div {
+  width: 100%;
+  text-align: center;
+}
+
 .chats[data-open="false"] {
   width: auto;
+}
+
+.chats[data-open="false"] > div {
+  position: absolute;
+  width: 20px;
+  right: 75px;
+  top: 0;
 }
 
 iframe {
@@ -101,6 +113,8 @@ fieldset {
   display: flex;
   align-items: center;
   gap: 1rem;
+  width: max-content;
+  width: 50vmax;
 }
 
 fieldset > *, fieldset > div > div {
@@ -111,6 +125,11 @@ fieldset > *, fieldset > div > div {
 
 fieldset > * {
   flex-direction: column;
+}
+
+fieldset > legend > button {
+  all: unset;
+  cursor: pointer;
 }
 
 .react-checkbox-tree {
@@ -130,4 +149,15 @@ fieldset > * {
 
 .rct-username-online {
   color: black;
+}
+
+.connectionIndicator {
+  background-color: red;
+  color: black;
+  margin: auto;
+  padding: 0.25rem;
+}
+
+.connectionIndicator[data-status="Open"]{
+  background-color: lime;
 }
