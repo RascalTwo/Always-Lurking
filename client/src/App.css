@@ -112,3 +112,22 @@ fieldset > *, fieldset > div > div {
 fieldset > * {
   flex-direction: column;
 }
+
+.react-checkbox-tree {
+  color: black;
+  background-color: white;
+  max-height: 25vh;
+  overflow: scroll;
+}
+
+.rct-node-icon {
+  display: none;
+}
+
+.rct-username-offline {
+  color: grey;
+}
+
+.rct-username-online {
+  color: black;
+}

@@ -5,6 +5,8 @@ import { useEffect } from 'react';
 import { useMemo } from 'react';
 import { useCallback } from 'react';
 import Joyride, { ACTIONS, CallBackProps } from 'react-joyride';
+import 'react-checkbox-tree/lib/react-checkbox-tree.css';
+import CheckboxTree from 'react-checkbox-tree';
 
 interface GroupPayload {
   name: string;
@@ -241,12 +243,24 @@ function App() {
 
   const [selectedChat, setSelectedChat] = useState('');
 
+  const [checked, setChecked] = useState<string[]>([]);
+  useEffect(() => {
+    selectGroups(
+      groups.filter(group => group.members.some(member => checked.includes(member))).map(group => group.slug),
+    );
+  }, [checked, groups, selectGroups]);
+
   const onlineUsernames = useMemo(() => [...new Set(selectedGroups.flatMap(group => group.online))], [selectedGroups]);
 
   const displayingUsernames = useMemo(() => {
     if (manualExclusive && manualUsernames.length) return manualUsernames;
-    return [...new Set([...onlineUsernames.filter(un => !hiddenUsernames.includes(un)), ...manualUsernames])];
-  }, [onlineUsernames, manualUsernames, hiddenUsernames, manualExclusive]);
+    return [
+      ...new Set([
+        ...onlineUsernames.filter(un => !hiddenUsernames.includes(un) && checked.includes(un)),
+        ...manualUsernames,
+      ]),
+    ];
+  }, [onlineUsernames, manualUsernames, hiddenUsernames, manualExclusive, checked]);
   const { autocollectPoints, setAutocollectPoints, pointWindows, setCollectingPointUsernames } =
     usePointCollecting(displayingUsernames);
   const players = useMemo(
@@ -277,8 +291,8 @@ function App() {
         placement: 'left',
       },
       {
-        target: 'select',
-        content: 'Here you can select which group(s) you want to be watching if any',
+        target: '.react-checkbox-tree',
+        content: 'Here you can select which group/group members you want to be watching - if any',
       },
       {
         target: 'input[placeholder="Manual Usernames"]',
@@ -315,6 +329,31 @@ function App() {
   // @ts-ignore
   const joyride = <Joyride run={onboarding} steps={steps} continuous={true} callback={onOnboardChange} />;
 
+  const [expanded, setExpanded] = useState<string[]>([]);
+
+  const checkboxTree = (
+    // @ts-ignore
+    <CheckboxTree
+      nodes={useMemo(
+        () =>
+          groups.map(group => ({
+            value: group.slug,
+            label: `${group.name} - (${group.online.length}/${group.members.length})`,
+            title: `${group.name} - ${group.online.length} of ${group.members.length} currently online`,
+            children: group.members.map(member => ({
+              value: member,
+              label: member,
+              className: `rct-username-o${group.online.includes(member) ? 'n' : 'ff'}line`,
+            })),
+          })),
+        [groups],
+      )}
+      checked={checked}
+      expanded={expanded}
+      onCheck={checked => setChecked(checked)}
+      onExpand={expanded => setExpanded(expanded)}
+    />
+  );
   return (
     <>
       {joyride}
@@ -327,27 +366,8 @@ function App() {
             </button>
           </legend>
           <div>
-            Groups to Watch
-            <select
-              value={selectedGroups.map(group => group.slug)}
-              onChange={e =>
-                selectGroups(
-                  Array.from(e.currentTarget.options)
-                    .filter(opt => opt.selected)
-                    .map(opt => opt.value),
-                )
-              }
-              multiple
-            >
-              <option value="" selected>
-                None
-              </option>
-              {groups.map(group => (
-                <option key={group.slug} value={group.slug}>
-                  {group.name} {group.members.length}
-                </option>
-              ))}
-            </select>
+            Groups to watch
+            {checkboxTree}
             {selectedGroups.length ? (
               <span
                 style={{
