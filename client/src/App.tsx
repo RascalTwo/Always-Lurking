@@ -123,7 +123,11 @@ const useCheckboxTree = (
   groups: Group[],
   selectGroups: React.Dispatch<React.SetStateAction<string[]>>,
 ): [string[], JSX.Element] => {
-  const [selectedUsernames, setSelectedUsernames] = useState<string[]>([]);
+  const [rawSelectedUsernames, setSelectedUsernames] = useState<string[]>([]);
+  const selectedUsernames = useMemo(
+    () => rawSelectedUsernames.map(data => JSON.parse(data)[1]).filter((username, i, array) => array.indexOf(username) === i),
+    [rawSelectedUsernames],
+  );
 
   useEffect(
     () =>
@@ -144,7 +148,7 @@ const useCheckboxTree = (
         label: `${group.name} - (${group.online.length}/${group.members.length})`,
         title: `${group.name} - ${group.online.length} of ${group.members.length} currently online`,
         children: group.members.map(member => ({
-          value: member,
+          value: JSON.stringify([group.slug, member]),
           label: member,
           className: `rct-username-o${group.online.includes(member) ? 'n' : 'ff'}line`,
         })),
@@ -157,16 +161,16 @@ const useCheckboxTree = (
       // @ts-ignore
       <CheckboxTree
         nodes={treeNodes}
-        checked={selectedUsernames}
+        checked={rawSelectedUsernames}
         expanded={expanded}
         onCheck={setSelectedUsernames}
         onExpand={setExpanded}
       />
     ),
-    [selectedUsernames, expanded, treeNodes],
+    [rawSelectedUsernames, expanded, treeNodes],
   );
 
-  useDebugValue(selectedUsernames);
+  useDebugValue(rawSelectedUsernames);
 
   return [selectedUsernames, CheckboxTreeElement];
 };
