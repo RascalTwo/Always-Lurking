@@ -17,8 +17,7 @@ export class TwitchLookups {
   }
 
   static load() {
-    return fs.promises
-      .readFile(UID_CACHE_PATH)
+    return (fs.existsSync(UID_CACHE_PATH) ? fs.promises.readFile(UID_CACHE_PATH) : Promise.resolve('{}'))
       .then(buffer => buffer.toString())
       .then(content => JSON.parse(content))
       .then(data => {
