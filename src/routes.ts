@@ -1,4 +1,5 @@
 import { Application } from 'express-ws';
+import Router from 'express-promise-router';
 import {
   getGroups,
   handleTwitchEventsub,
@@ -7,10 +8,19 @@ import {
   setGroupMembers,
   removeGroupMember,
   requirePassword,
+  getSchedule,
 } from './controllers';
 
 export default (app: Application) => {
-  app.get('/api/schedule', getSchedule);
+  const router = Router();
+
+  router.get('/api/schedule', getSchedule);
+  router.get('/api/groups', getGroups);
+  router.put('/api/group/member', requirePassword, addGroupMember);
+  router.put('/api/group/members', requirePassword, setGroupMembers);
+  router.delete('/api/group/member', requirePassword, removeGroupMember);
+  app.use(router);
+
   app.ws('/api/ws', handleWS);
-  app.post('/api/webhook', handleTwitchEventsub);
+  router.post('/api/webhook', handleTwitchEventsub);
 };
