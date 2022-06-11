@@ -3,7 +3,7 @@ import expressWs from 'express-ws';
 import { PORT } from './constants';
 
 import { GROUPS, loadGroups } from './groups';
-import { TwitchLookups } from './lookups';
+import { ScheduleLookups, TwitchLookups } from './lookups';
 import setupRoutes from './routes';
 import {
   syncUIDCache,
@@ -21,6 +21,9 @@ app.use(express.static('client/build'));
 setupRoutes(app);
 
 (async function startup() {
+  console.log('[Startup] Loading schedules...');
+  await ScheduleLookups.load();
+
   console.log('[Startup] Loading groups...');
   await loadGroups();
   console.log(`[Startup] ${GROUPS.length} groups loaded`);

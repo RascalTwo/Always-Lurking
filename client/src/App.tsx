@@ -8,6 +8,7 @@ import CheckboxTree from 'react-checkbox-tree';
 import { TWITCH_PARENT } from './constants';
 import { useGroups, useGroupWebsocket, useHashedCSA, useHashState, usePlayerWindows } from './hooks';
 import { Group } from './group';
+import Schedule from './Schedule';
 
 const useAutoplay = (): [boolean, JSX.Element] => {
   const [autoplay, setAutoplay] = useHashState(true, 'autoplay');
@@ -253,15 +254,23 @@ function App() {
   const updateSelectedChat = useCallback(e => setSelectedChat(e.currentTarget.value), []);
   const togglePoppedOut = useCallback(() => toggleWindow(selectedChat), [selectedChat, toggleWindow]);
 
+  const [schedule, setSchedule] = useState(false);
+  const requestedUsernames = useMemo(
+    () => [...new Set([...selectedUsernames, ...additionalUsernames])],
+    [selectedUsernames, additionalUsernames],
+  );
+
   return (
     <>
       {JoyrideElement}
+      {schedule ? <Schedule usernames={requestedUsernames} /> : null}
       <ToggleableDetails defaultOpen={!selectedGroups.length}>
         {GroupSelectorElement}
         <div>
           {PopoutElement}
           {AutoplayElement}
           <button onClick={toggleJoyride}>Help</button>
+          <button onClick={useCallback(() => setSchedule(schedule => !schedule), [setSchedule])}>{schedule ? 'Hide' : 'Show'} Schedule</button>
         </div>
       </ToggleableDetails>
       <section className="content">

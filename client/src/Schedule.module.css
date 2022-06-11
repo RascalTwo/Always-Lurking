@@ -1,0 +1,22 @@
+.fieldset {
+	display: block;
+}
+
+.fieldset ul {
+	list-style: none;
+	padding: 0;
+}
+
+
+.fieldset li {
+	text-align: left;
+	padding: 0.5rem 0;
+}
+
+.fieldset > div {
+	display: flex;
+	flex-direction: row;
+}
+.fieldset > div > * {
+	flex: 1;
+}

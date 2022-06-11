@@ -153,6 +153,40 @@ export function getStreams(params: GetStreamsParams) {
   return axios.get<any, AxiosResponse<GetStreamsResponse>>(`${BASE_URL}/streams`, { params, headers: HEADERS });
 }
 
+interface GetScheduleParams {
+  broadcaster_id: string
+}
+
+export interface ScheduleSegment {
+  id: string
+  start_time: string
+  end_time: string
+  title: string
+  canceled_until: string | null
+  category: {
+    id: string
+    name: string
+  } | null
+  is_recurring: string
+}
+
+interface GetScheduleResponse extends Pageable {
+  data: {
+    segments: ScheduleSegment[]
+    broadcaster_id: string
+    broadcaster_name: string
+    broadcaster_login: string
+    vacation: {
+      start_time: string
+      end_time: string
+    } | null
+  }
+}
+
+export function getSchedule(params: GetScheduleParams){
+  return axios.get<any, AxiosResponse<GetScheduleResponse>>(`${BASE_URL}/schedule`, { params, headers: HEADERS });
+}
+
 export async function paginageResults<T extends Pageable>(response: AxiosResponse<T>) {
   const results: T[] = [response.data];
 

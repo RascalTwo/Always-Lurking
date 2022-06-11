@@ -10,7 +10,7 @@ import {
   outputGroupStates,
   syncUIDCache,
 } from './helpers';
-import { TwitchLookups } from './lookups';
+import { ScheduleLookups, TwitchLookups } from './lookups';
 
 function getGroupsBySlugs(...slugs: string[]) {
   return GROUPS.filter(group => slugs.includes(group.slug));
@@ -161,4 +161,19 @@ export function handleTwitchEventsub(req: Request, res: Response) {
       console.error('Unexpected notification type:', notificationType, req.body);
       return res.status(400).end();
   }
+}
+
+export async function getSchedule(req: Request, res: Response) {
+  const usernames = Array.isArray(req.query.usernames)
+    ? (req.query.usernames as string[])
+    : ([req.query.usernames] as string[]);
+
+  await syncUIDCache('Schedule Request', ...usernames);
+
+  const uidMapping = await ScheduleLookups.get(
+    ...usernames.map((username: string) => TwitchLookups.USERNAME_TO_UID[username]).filter(Boolean),
+  );
+  return res.json(
+    Object.fromEntries(Object.entries(uidMapping).map(([uid, segments]) => [TwitchLookups.UID_TO_USERNAME[uid], segments])),
+  );
 }
