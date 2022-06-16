@@ -176,15 +176,6 @@ const useCheckboxTree = (
   return [selectedUsernames, CheckboxTreeElement];
 };
 
-function ConnectionIndicator({ display, connectionStatus }: { display: boolean; connectionStatus: string }) {
-  if (!display) return null;
-  return (
-    <span className="connectionIndicator" data-status={connectionStatus}>
-      Connection: {connectionStatus}
-    </span>
-  );
-}
-
 const useGroupSelector = () => {
   const [groups, updateGroups] = useGroups();
 
@@ -193,7 +184,6 @@ const useGroupSelector = () => {
     () => groups.filter(group => selectedGroupSlugs.includes(group.slug)),
     [selectedGroupSlugs, groups],
   );
-  const [connectionStatus] = useGroupWebsocket(selectedGroupSlugs, updateGroups);
   const [additionalUsernames, AdditionalUsernamesElement] = useAdditionalUsernames();
 
   const [selectedUsernames, CheckboxTreeElement] = useCheckboxTree(groups, selectGroups);
@@ -203,25 +193,25 @@ const useGroupSelector = () => {
       <div>
         Groups to watch
         {CheckboxTreeElement}
-        <ConnectionIndicator display={!!selectedGroupSlugs.length} connectionStatus={connectionStatus} />
         {AdditionalUsernamesElement}
       </div>
     ),
-    [CheckboxTreeElement, AdditionalUsernamesElement, connectionStatus, selectedGroupSlugs.length],
+    [CheckboxTreeElement, AdditionalUsernamesElement],
   );
 
   useDebugValue(selectedGroups.map(g => g.slug));
 
-  return { selectedUsernames, selectedGroups, additionalUsernames, GroupSelectorElement };
+  return { selectedUsernames, selectedGroups, additionalUsernames, GroupSelectorElement, connectionStatus: useGroupWebsocket(selectedGroupSlugs, updateGroups) };
 };
 
-function ToggleableDetails({ defaultOpen = true, children }: { defaultOpen?: boolean; children: React.ReactNode }) {
+function ToggleableDetails({ defaultOpen = true, connectionStatus, children }: { defaultOpen?: boolean; connectionStatus: string, children: React.ReactNode }) {
   const [open, setOpen] = useState(defaultOpen);
+  console.log({ connectionStatus });
   return (
     <details open={open} onToggle={useCallback(e => setOpen(e.currentTarget.open), [])}>
-      <summary>Controls</summary>
+      <summary className="connectionIndicator" data-status={connectionStatus}>Controls</summary>
       <fieldset>
-        <legend>
+        <legend className="connectionIndicator" data-status={connectionStatus}>
           <button onClick={useCallback(() => setOpen(open => !open), [])}>▼ Controls</button>
         </legend>
         {children}
@@ -231,7 +221,7 @@ function ToggleableDetails({ defaultOpen = true, children }: { defaultOpen?: boo
 }
 
 function App() {
-  const { selectedUsernames, selectedGroups, additionalUsernames, GroupSelectorElement } = useGroupSelector();
+  const { selectedUsernames, selectedGroups, additionalUsernames, GroupSelectorElement, connectionStatus } = useGroupSelector();
 
   const [toggleJoyride, JoyrideElement] = useJoyride();
   const [autoplay, AutoplayElement] = useAutoplay();
@@ -264,7 +254,7 @@ function App() {
     <>
       {JoyrideElement}
       {schedule ? <Schedule usernames={requestedUsernames} /> : null}
-      <ToggleableDetails defaultOpen={!selectedGroups.length}>
+      <ToggleableDetails defaultOpen={!selectedGroups.length} connectionStatus={connectionStatus}>
         {GroupSelectorElement}
         <div>
           {PopoutElement}

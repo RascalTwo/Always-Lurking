@@ -73,7 +73,7 @@ export const useGroupWebsocket = (groupSlugs: string[], updateGroups: (updater: 
   const [socketUrl, setSocketURL] = useState('');
 
   useEffect(() => {
-    if (!groupSlugs.length) return;
+    if (!groupSlugs.length) return setSocketURL('');
     const url = new URL(`ws${IS_SECURE ? 's' : ''}://` + window.location.host + '/api/ws');
     for (const slug of groupSlugs) url.searchParams.append('group', slug);
     setSocketURL(url.toString());
@@ -106,7 +106,7 @@ export const useGroupWebsocket = (groupSlugs: string[], updateGroups: (updater: 
     [readyState],
   );
 
-  return [connectionStatus];
+  return connectionStatus;
 };
 
 const useNonce = () => {

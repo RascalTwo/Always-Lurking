@@ -153,11 +153,19 @@ fieldset > legend > button {
 
 .connectionIndicator {
   background-color: red;
-  color: black;
-  margin: auto;
-  padding: 0.25rem;
+  color: white;
+  padding: 0.135rem 0.5rem;
+  border-radius: 1rem;
+  text-decoration: none;
+  width: max-content;
+  user-select: none;
+}
+
+summary.connectionIndicator {
+  margin-left: 1rem;
 }
 
 .connectionIndicator[data-status="Open"]{
   background-color: lime;
+  color: black;
 }
