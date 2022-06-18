@@ -25,8 +25,7 @@ export const useHashState = <S extends {}>(
   key: string,
 ): [S, React.Dispatch<React.SetStateAction<S>>] => {
   const hashValue = useMemo(() => new URLSearchParams(window.location.hash.slice(1)).get(key), [key]);
-  const [state, setState] = useState<S>(hashValue === null ? defaultValue : JSON.parse(hashValue));
-  if (key === 'group') console.log({ hashValue, state });
+  const [state, setState] = useState<S>(hashValue === null ? defaultValue : JSON.parse(hashValue))
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.hash.slice(1));
@@ -40,12 +39,12 @@ export const useHashState = <S extends {}>(
 };
 
 export const useHashedCSA = (
-  defaultValue: string,
+  defaultValue: string[],
   key: string,
 ): [string, React.Dispatch<React.SetStateAction<string>>, string[]] => {
-  const [text, setText, array] = useCSA(defaultValue);
-  const updateHashState = useHashState(array, key)[1];
-  useEffect(() => updateHashState(array), [array, updateHashState]);
+  const [state, updateHashState] = useHashState(defaultValue, key);
+  const [text, setText, array] = useCSA(state.join(','));
+  useEffect(() => updateHashState(array), [key, array, updateHashState]);
 
   useDebugValue(array);
 

@@ -31,7 +31,7 @@ const useAutoplay = (): [boolean, JSX.Element] => {
 };
 
 const useAdditionalUsernames = (): [string[], JSX.Element] => {
-  const [additionalUsernamesText, setAdditionalUsernamesText, additionalUsernames] = useHashedCSA('', 'additional');
+  const [additionalUsernamesText, setAdditionalUsernamesText, additionalUsernames] = useHashedCSA([], 'additional');
 
   const updateAdditionalUsernamesText = useCallback(
     e => setAdditionalUsernamesText(e.currentTarget.value),
@@ -124,9 +124,29 @@ const useCheckboxTree = (
   groups: Group[],
   selectGroups: React.Dispatch<React.SetStateAction<string[]>>,
 ): [string[], JSX.Element] => {
-  const [rawSelectedUsernames, setSelectedUsernames] = useState<string[]>([]);
+  const [encoded, setEncoded] = useHashState<Record<string, string[]>>({}, 'selected');
+  const decoded = useMemo(
+    () => Object.entries(encoded).flatMap(([group, members]) => members.map(member => JSON.stringify([group, member]))),
+    [encoded],
+  );
+  const [rawSelectedUsernames, setSelectedUsernames] = useState(decoded);
+  useEffect(() => {
+    if (JSON.stringify(decoded) !== JSON.stringify(rawSelectedUsernames))
+      setEncoded(
+        rawSelectedUsernames.reduce((map, value) => {
+          const [group, channel] = JSON.parse(value);
+          if (!(group in map)) map[group] = [];
+          map[group].push(channel);
+          return map;
+        }, {} as Record<string, string[]>),
+      );
+  }, [decoded, rawSelectedUsernames, setEncoded]);
+
   const selectedUsernames = useMemo(
-    () => rawSelectedUsernames.map(data => JSON.parse(data)[1]).filter((username, i, array) => array.indexOf(username) === i),
+    () =>
+      rawSelectedUsernames
+        .map(data => JSON.parse(data)[1])
+        .filter((username, i, array) => array.indexOf(username) === i),
     [rawSelectedUsernames],
   );
 
@@ -168,7 +188,7 @@ const useCheckboxTree = (
         onExpand={setExpanded}
       />
     ),
-    [rawSelectedUsernames, expanded, treeNodes],
+    [rawSelectedUsernames, expanded, treeNodes, setSelectedUsernames],
   );
 
   useDebugValue(rawSelectedUsernames);
@@ -201,15 +221,30 @@ const useGroupSelector = () => {
 
   useDebugValue(selectedGroups.map(g => g.slug));
 
-  return { selectedUsernames, selectedGroups, additionalUsernames, GroupSelectorElement, connectionStatus: useGroupWebsocket(selectedGroupSlugs, updateGroups) };
+  return {
+    selectedUsernames,
+    selectedGroups,
+    additionalUsernames,
+    GroupSelectorElement,
+    connectionStatus: useGroupWebsocket(selectedGroupSlugs, updateGroups),
+  };
 };
 
-function ToggleableDetails({ defaultOpen = true, connectionStatus, children }: { defaultOpen?: boolean; connectionStatus: string, children: React.ReactNode }) {
+function ToggleableDetails({
+  defaultOpen = true,
+  connectionStatus,
+  children,
+}: {
+  defaultOpen?: boolean;
+  connectionStatus: string;
+  children: React.ReactNode;
+}) {
   const [open, setOpen] = useState(defaultOpen);
-  console.log({ connectionStatus });
   return (
     <details open={open} onToggle={useCallback(e => setOpen(e.currentTarget.open), [])}>
-      <summary className="connectionIndicator" data-status={connectionStatus}>Controls</summary>
+      <summary className="connectionIndicator" data-status={connectionStatus}>
+        Controls
+      </summary>
       <fieldset>
         <legend className="connectionIndicator" data-status={connectionStatus}>
           <button onClick={useCallback(() => setOpen(open => !open), [])}>▼ Controls</button>
