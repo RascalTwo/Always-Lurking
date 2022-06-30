@@ -27,14 +27,14 @@ export async function saveGroups(groups: Group[]) {
   );
 }
 
-export function markUserOnline(group: Group, username: string) {
+export function markUserOnline(group: Group, username: string, started: number) {
   if (!group.members.includes(username))
     return console.error(`Tried to mark ${username} online in ${group.slug} where they are not a member`);
 
-  group.online.push(username);
-  group.online.sort((a, b) => group.members.indexOf(a) - group.members.indexOf(b));
+  group.online.push({ started, username });
+  group.online.sort((a, b) => group.members.indexOf(a.username) - group.members.indexOf(b.username));
   for (const client of group.clients) {
-    client.send(JSON.stringify({ event: 'online', username }));
+    client.send(JSON.stringify({ event: 'online', username, started }));
   }
 }
 
@@ -42,7 +42,7 @@ export function markUserOffline(group: Group, username: string) {
   if (!group.members.includes(username))
     return console.error(`Tried to mark ${username} offline in ${group.slug}, but they are not a member`);
 
-  const onlineIndex = group.online.indexOf(username);
+  const onlineIndex = group.online.findIndex(online => online.username === username);
   if (onlineIndex === -1)
     return console.error(`Tried to mark ${username} as offline in ${group.slug} before they were online`);
 

@@ -62,7 +62,7 @@ export async function removeGroupMember(req: Request, res: Response) {
   group.members.splice(memberIndex, 1);
   await saveGroups(GROUPS);
 
-  for (const group of GROUPS.filter(group => group.online.includes(username))) {
+  for (const group of GROUPS.filter(group => group.online.find(online => online.username === username))) {
     markUserOffline(group, username);
   }
 
@@ -83,14 +83,14 @@ export async function setGroupMembers(req: Request, res: Response) {
   if (!group) return res.status(400).send('Invalid Group Slug: ' + groupSlug);
 
   group.members = members;
-  const goingOffline = group.online.filter(online => !group.members.includes(online));
-  for (const username of goingOffline) {
+  const goingOffline = group.online.filter(online => !group.members.includes(online.username));
+  for (const { username } of goingOffline) {
     markUserOffline(group, username);
   }
 
   const { needed, obsolete } = await collectSubscriptionChanges(
     'Set Group Members',
-    ...goingOffline.concat(group.members).map(username => TwitchLookups.USERNAME_TO_UID[username]),
+    ...goingOffline.map(online => online.username).concat(group.members).map(username => TwitchLookups.USERNAME_TO_UID[username]),
   );
   await createNeededSubscriptions('Set Group Members', ...needed);
   await deleteObsoleteSubscriptions('Set Group Members', ...obsolete);
@@ -140,7 +140,7 @@ export function handleTwitchEventsub(req: Request, res: Response) {
       console.log(`${username} (${uid}) has went ${event} `);
       if (isOnline) {
         for (const group of GROUPS) {
-          if (group.members.includes(username)) markUserOnline(group, username);
+          if (group.members.includes(username)) markUserOnline(group, username, new Date(req.body.event.started_at).getTime());
         }
       } else {
         for (const group of GROUPS) {
@@ -174,6 +174,8 @@ export async function getSchedule(req: Request, res: Response) {
     ...usernames.map((username: string) => TwitchLookups.USERNAME_TO_UID[username]).filter(Boolean),
   );
   return res.json(
-    Object.fromEntries(Object.entries(uidMapping).map(([uid, segments]) => [TwitchLookups.UID_TO_USERNAME[uid], segments])),
+    Object.fromEntries(
+      Object.entries(uidMapping).map(([uid, segments]) => [TwitchLookups.UID_TO_USERNAME[uid], segments]),
+    ),
   );
 }

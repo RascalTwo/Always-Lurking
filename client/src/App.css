@@ -66,6 +66,17 @@
     "g h i";
 }
 
+.player-wrapper {
+  position: relative;
+}
+
+.uptime {
+  position: absolute;
+  top: 1.25rem;
+  right: 4.5rem;
+  pointer-events: none;
+}
+
 .chats[data-open="true"] {
   width: 425px;
 }

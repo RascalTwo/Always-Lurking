@@ -35,14 +35,11 @@ export async function syncUIDCache(label: string, ...usernames: string[]) {
 export async function discoverOnlineUsernames(label: string, ...usernames: string[]) {
   console.log(`[${label}] Getting currently online users...`);
 
-  const onlineUsernames: string[] = [];
-
   for (let i = 0; i < usernames.length; i += 50) {
     for (const { data } of await paginageResults(await getStreams({ user_login: usernames.slice(i, i + 50) }))) {
-      for (const { user_login } of data) {
-        onlineUsernames.push(user_login);
+      for (const { user_login, started_at } of data) {
         for (const group of GROUPS) {
-          if (group.members.includes(user_login)) markUserOnline(group, user_login);
+          if (group.members.includes(user_login)) markUserOnline(group, user_login, new Date(started_at).getTime());
         }
       }
     }

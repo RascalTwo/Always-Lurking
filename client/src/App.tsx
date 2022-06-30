@@ -171,7 +171,7 @@ const useCheckboxTree = (
         children: group.members.map(member => ({
           value: JSON.stringify([group.slug, member]),
           label: member,
-          className: `rct-username-o${group.online.includes(member) ? 'n' : 'ff'}line`,
+          className: `rct-username-o${group.online.find(online => online.username === member) ? 'n' : 'ff'}line`,
         })),
       })),
     [groups],
@@ -255,8 +255,22 @@ function ToggleableDetails({
   );
 }
 
+function UptimeTicker({ started }: { started: number | null }){
+  const [elapsed, setElapsed] = useState(() => started ? Date.now() - started : 0);
+  useEffect(() => {
+    if (!started) return;
+    const interval = setInterval(() => setElapsed(elapsed => elapsed + 1000), 1000);
+    return () => clearInterval(interval);
+  }, [started]);
+
+  if (!started) return null;
+
+  return <time dateTime={new Date(started).toISOString()} className="uptime">{new Date(elapsed).toISOString().substr(11, 8)}</time>
+}
+
 function App() {
-  const { selectedUsernames, selectedGroups, additionalUsernames, GroupSelectorElement, connectionStatus } = useGroupSelector();
+  const { selectedUsernames, selectedGroups, additionalUsernames, GroupSelectorElement, connectionStatus } =
+    useGroupSelector();
 
   const [toggleJoyride, JoyrideElement] = useJoyride();
   const [autoplay, AutoplayElement] = useAutoplay();
@@ -266,7 +280,12 @@ function App() {
   const onlineUsernames = useMemo(() => [...new Set(selectedGroups.flatMap(group => group.online))], [selectedGroups]);
 
   const displayingUsernames = useMemo(() => {
-    return [...new Set([...onlineUsernames.filter(un => selectedUsernames.includes(un)), ...additionalUsernames])];
+    return [
+      ...new Set([
+        ...onlineUsernames.map(online => online.username).filter(un => selectedUsernames.includes(un)),
+        ...additionalUsernames,
+      ]),
+    ];
   }, [onlineUsernames, additionalUsernames, selectedUsernames]);
 
   const [openWindowUsernames, toggleWindow, PopoutElement] = usePlayerWindows(displayingUsernames);
@@ -295,22 +314,26 @@ function App() {
           {PopoutElement}
           {AutoplayElement}
           <button onClick={toggleJoyride}>Help</button>
-          <button onClick={useCallback(() => setSchedule(schedule => !schedule), [setSchedule])}>{schedule ? 'Hide' : 'Show'} Schedule</button>
+          <button onClick={useCallback(() => setSchedule(schedule => !schedule), [setSchedule])}>
+            {schedule ? 'Hide' : 'Show'} Schedule
+          </button>
         </div>
       </ToggleableDetails>
       <section className="content">
         <div className="players" data-count={players.length}>
           {players.map((username, i) => (
-            <iframe
-              title={username}
-              key={username}
-              style={{ gridArea: String.fromCharCode(97 + i) }}
-              src={
-                `https://embed.twitch.tv/?allowfullscreen=true&channel=${username}&layout=video&theme=dark&autoplay=${autoplay}&parent=` +
-                TWITCH_PARENT
-              }
-              allowFullScreen
-            />
+            <div className="player-wrapper" style={{ gridArea: String.fromCharCode(97 + i) }}>
+              <UptimeTicker started={onlineUsernames.find(online => online.username === username)?.started || null} />
+              <iframe
+                title={username}
+                key={username}
+                src={
+                  `https://embed.twitch.tv/?allowfullscreen=true&channel=${username}&layout=video&theme=dark&autoplay=${autoplay}&parent=` +
+                  TWITCH_PARENT
+                }
+                allowFullScreen
+              />
+            </div>
           ))}
         </div>
         <div className="chats" data-open={!!selectedChat}>

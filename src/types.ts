@@ -5,7 +5,7 @@ export interface GroupInfo {
   name: string;
   slug: string;
   members: string[];
-	online: string[]
+	online: { started: number, username: string}[]
 }
 
 export interface Group extends GroupInfo {

@@ -83,12 +83,12 @@ export const useGroupWebsocket = (groupSlugs: string[], updateGroups: (updater: 
   useEffect(() => {
     if (!lastJsonMessage) return;
     if (lastJsonMessage.event === 'online') {
-      updateGroups(group => group.addOnlineUsername(lastJsonMessage.username));
+      updateGroups(group => group.addOnlineUsername(lastJsonMessage.username, lastJsonMessage.started));
     } else if (lastJsonMessage.event === 'offline') {
       updateGroups(group => group.removeOnlineUsername(lastJsonMessage.username));
     } else if (lastJsonMessage.event === 'sync') {
       updateGroups(group =>
-        group.slug !== lastJsonMessage.group ? group : group.setOnlineUsernames(lastJsonMessage.online),
+        group.slug !== lastJsonMessage.group ? group : group.setOnline(lastJsonMessage.online),
       );
     }
   }, [lastJsonMessage, updateGroups]);
