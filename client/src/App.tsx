@@ -123,6 +123,7 @@ const useJoyride = (): [() => void, JSX.Element] => {
 const useCheckboxTree = (
   groups: Group[],
   selectGroups: React.Dispatch<React.SetStateAction<string[]>>,
+  profileIcons: Record<string, string>,
 ): [string[], JSX.Element] => {
   const [encoded, setEncoded] = useHashState<Record<string, string[]>>({}, 'selected');
   const decoded = useMemo(
@@ -173,7 +174,7 @@ const useCheckboxTree = (
         children: group.members.map(member => {
           const started = onlineUsernames.find(online => online.username === member)?.started || null;
           return {
-            icon: <span />,
+            icon: <img className="r2-icon" src={profileIcons[member] || ''} />,
             value: JSON.stringify([group.slug, member]),
             label: (
               <span>
@@ -211,6 +212,31 @@ const useCheckboxTree = (
   return [selectedUsernames, CheckboxTreeElement];
 };
 
+const useProfileIcons = (usernames: string[]) => {
+  const [profileIcons, setProfileIcons] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const missingUsernames = usernames.filter(username => !(username in profileIcons));
+    if (!missingUsernames.length) return;
+
+    let mounted = true;
+
+    const url = new URL('/api/profile-icons', window.location.origin);
+    for (const username of missingUsernames) url.searchParams.append('usernames', username);
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        if (mounted) setProfileIcons({ ...profileIcons, ...data });
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [profileIcons, usernames]);
+
+  return profileIcons;
+};
+
 const useGroupSelector = () => {
   const [groups, updateGroups] = useGroups();
 
@@ -221,7 +247,10 @@ const useGroupSelector = () => {
   );
   const [additionalUsernames, AdditionalUsernamesElement] = useAdditionalUsernames();
 
-  const [selectedUsernames, CheckboxTreeElement] = useCheckboxTree(groups, selectGroups);
+  const profileIcons = useProfileIcons(
+    useMemo(() => [...additionalUsernames, ...groups.flatMap(group => group.members)], [additionalUsernames, groups]),
+  );
+  const [selectedUsernames, CheckboxTreeElement] = useCheckboxTree(groups, selectGroups, profileIcons);
 
   const GroupSelectorElement = useMemo(
     () => (
@@ -240,6 +269,7 @@ const useGroupSelector = () => {
     selectedUsernames,
     selectedGroups,
     additionalUsernames,
+    profileIcons,
     GroupSelectorElement,
     connectionStatus: useGroupWebsocket(selectedGroupSlugs, updateGroups),
   };

@@ -9,6 +9,7 @@ import {
   removeGroupMember,
   requirePassword,
   getSchedule,
+  getProfileIcons
 } from './controllers';
 
 export default (app: Application) => {
@@ -16,6 +17,7 @@ export default (app: Application) => {
 
   router.get('/api/schedule', getSchedule);
   router.get('/api/groups', getGroups);
+  router.get('/api/profile-icons', getProfileIcons);
   router.put('/api/group/member', requirePassword, addGroupMember);
   router.put('/api/group/members', requirePassword, setGroupMembers);
   router.delete('/api/group/member', requirePassword, removeGroupMember);

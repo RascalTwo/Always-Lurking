@@ -10,7 +10,7 @@ import {
   outputGroupStates,
   syncUIDCache,
 } from './helpers';
-import { ScheduleLookups, TwitchLookups } from './lookups';
+import { ProfileIconLookups, ScheduleLookups, TwitchLookups } from './lookups';
 
 function getGroupsBySlugs(...slugs: string[]) {
   return GROUPS.filter(group => slugs.includes(group.slug));
@@ -178,4 +178,23 @@ export async function getSchedule(req: Request, res: Response) {
       Object.entries(uidMapping).map(([uid, segments]) => [TwitchLookups.UID_TO_USERNAME[uid], segments]),
     ),
   );
+}
+
+export async function getProfileIcons(req: Request, res: Response) {
+  const usernames = Array.isArray(req.query.usernames)
+    ? (req.query.usernames as string[])
+    : ([req.query.usernames] as string[]);
+
+  await syncUIDCache('Profile Icons', ...usernames);
+
+  const uidMapping = await ProfileIconLookups.get(
+    ...usernames.map((username: string) => TwitchLookups.USERNAME_TO_UID[username]).filter(Boolean),
+  );
+  const results = Object.fromEntries(
+    Object.entries(uidMapping).map(([uid, url]) => [TwitchLookups.UID_TO_USERNAME[uid], url]),
+  )
+  for (const username of usernames) {
+    if (!results[username]) results[username] = '';
+  }
+  return res.json(results);
 }

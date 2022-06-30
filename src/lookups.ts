@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { getSchedule, ScheduleSegment } from './twitch';
+import { getSchedule, getUsers, ScheduleSegment } from './twitch';
 
 const UID_CACHE_PATH = 'cache/uids.json';
 
@@ -65,5 +65,42 @@ export class ScheduleLookups {
       .then(buffer => buffer.toString())
       .then(content => JSON.parse(content))
       .then(data => (ScheduleLookups.CACHE = data));
+  }
+}
+
+
+const PROFILE_ICON_CACHE_PATH = 'cache/profile-icons.json';
+
+export class ProfileIconLookups {
+  public static TTL = 86400000 * 7;
+  public static CACHE: Record<string, { cached: number; url: string }> = {};
+  static async get(...uids: string[]) {
+    const now = Date.now();
+    const expiredUIDs = uids.filter(uid => now - (this.CACHE[uid]?.cached || 0) >= this.TTL);
+    for (let i = 0; i < expiredUIDs.length; i += 50) {
+      for (const user of (await getUsers({ id: expiredUIDs.slice(i, i + 50) })).data.data) {
+        TwitchLookups.update(user.login, user.id.toString());
+        this.CACHE[user.id] = {
+          cached: now,
+          url: user.profile_image_url,
+        };
+      }
+    }
+
+    await this.save();
+
+    const results: Record<string, string> = {};
+    for (const uid of uids) results[uid] = this.CACHE[uid].url;
+    return results;
+  }
+  static async save() {
+    return fs.promises.writeFile(PROFILE_ICON_CACHE_PATH, JSON.stringify(this.CACHE, undefined, '  '));
+  }
+
+  static load() {
+    return (fs.existsSync(PROFILE_ICON_CACHE_PATH) ? fs.promises.readFile(PROFILE_ICON_CACHE_PATH) : Promise.resolve('[]'))
+      .then(buffer => buffer.toString())
+      .then(content => JSON.parse(content))
+      .then(data => (ProfileIconLookups.CACHE = data));
   }
 }
