@@ -70,7 +70,7 @@
   position: relative;
 }
 
-.uptime {
+.player-wrapper .uptime {
   position: absolute;
   top: 1.25rem;
   right: 4.5rem;
@@ -150,8 +150,16 @@ fieldset > legend > button {
   overflow: scroll;
 }
 
-.rct-node-icon {
+.r2-group .rct-node-icon {
   display: none;
+}
+
+.rct-username-offline .rct-node-icon {
+  display: inline-block;
+}
+
+.rct-username-online .rct-node-icon {
+  display: inline-block;
 }
 
 .rct-username-offline {

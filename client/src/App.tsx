@@ -161,6 +161,7 @@ const useCheckboxTree = (
   );
 
   const [expanded, setExpanded] = useState<string[]>([]);
+  const onlineUsernames = useMemo(() => [...new Set(groups.flatMap(group => group.online))], [groups]);
 
   const treeNodes = useMemo(
     () =>
@@ -168,13 +169,27 @@ const useCheckboxTree = (
         value: group.slug,
         label: `${group.name} - (${group.online.length}/${group.members.length})`,
         title: `${group.name} - ${group.online.length} of ${group.members.length} currently online`,
-        children: group.members.map(member => ({
-          value: JSON.stringify([group.slug, member]),
-          label: member,
-          className: `rct-username-o${group.online.find(online => online.username === member) ? 'n' : 'ff'}line`,
-        })),
+        className: 'r2-group',
+        children: group.members.map(member => {
+          const started = onlineUsernames.find(online => online.username === member)?.started || null;
+          return {
+            icon: <span />,
+            value: JSON.stringify([group.slug, member]),
+            label: (
+              <span>
+                {member}{' '}
+                {started ? (
+                  <>
+                    - <UptimeTicker started={started} />
+                  </>
+                ) : null}
+              </span>
+            ),
+            className: `rct-username-o${group.online.find(online => online.username === member) ? 'n' : 'ff'}line`,
+          };
+        }),
       })),
-    [groups],
+    [groups, onlineUsernames],
   );
 
   const CheckboxTreeElement = useMemo(
@@ -255,8 +270,8 @@ function ToggleableDetails({
   );
 }
 
-function UptimeTicker({ started }: { started: number | null }){
-  const [elapsed, setElapsed] = useState(() => started ? Date.now() - started : 0);
+function UptimeTicker({ started }: { started: number | null }) {
+  const [elapsed, setElapsed] = useState(() => (started ? Date.now() - started : 0));
   useEffect(() => {
     if (!started) return;
     const interval = setInterval(() => setElapsed(elapsed => elapsed + 1000), 1000);
@@ -265,7 +280,11 @@ function UptimeTicker({ started }: { started: number | null }){
 
   if (!started) return null;
 
-  return <time dateTime={new Date(started).toISOString()} className="uptime">{new Date(elapsed).toISOString().substr(11, 8)}</time>
+  return (
+    <time dateTime={new Date(started).toISOString()} className="uptime">
+      {new Date(elapsed).toISOString().substr(11, 8)}
+    </time>
+  );
 }
 
 function App() {
