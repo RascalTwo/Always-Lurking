@@ -77,7 +77,9 @@
   pointer-events: none;
 }
 
-.chats[data-open="true"] {
+.chats {
+  display: flex;
+  flex-direction: column;
   width: 425px;
 }
 
@@ -95,6 +97,47 @@
   width: 20px;
   right: 75px;
   top: 0;
+}
+
+.chats ul {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  gap: .1rem;
+}
+
+.channel-chat-circle {
+  position: relative;
+  flex: 1;
+  width: 4vw;
+  text-align: center;
+}
+
+.channel-chat-circle img {
+  width: 4vw;
+  border-radius: 100%;
+  outline: 1px solid grey;
+}
+
+.channel-chat-circle button {
+  all: unset;
+  cursor: pointer;
+}
+
+.channel-chat-circle[data-selected="true"] img {
+  outline: 3px solid lime;
+}
+
+.channel-chat-circle span {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  border-radius: 100%;
+  padding: .1rem;
 }
 
 iframe {
@@ -120,7 +163,7 @@ summary, legend {
   text-decoration: underline;
 }
 
-fieldset {
+.main-controls fieldset {
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -128,13 +171,13 @@ fieldset {
   width: 50vmax;
 }
 
-fieldset > *, fieldset > div > div {
+.main-controls fieldset > *, fieldset > div > div {
   text-align: center;
   flex: 1;
   display: flex;
 }
 
-fieldset > * {
+.main-controls fieldset > * {
   flex-direction: column;
 }
 
@@ -187,4 +230,24 @@ summary.connectionIndicator {
 .connectionIndicator[data-status="Open"]{
   background-color: lime;
   color: black;
+}
+
+.chat-controls legend {
+  margin-left: auto;
+}
+
+.chat-controls summary {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.chat-controls fieldset {
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-controls fieldset > div {
+  margin: auto;
+  padding-bottom: 0.5rem;
 }

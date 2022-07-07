@@ -1,14 +1,18 @@
 import './App.css';
-import React, { useState, useEffect, useMemo, useCallback, useDebugValue } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useDebugValue, useRef } from 'react';
 import Joyride, { ACTIONS, CallBackProps } from 'react-joyride';
 
 import 'react-checkbox-tree/lib/react-checkbox-tree.css';
 import CheckboxTree from 'react-checkbox-tree';
 
+import tmi from 'tmi.js';
+
 import { TWITCH_PARENT } from './constants';
 import { useGroups, useGroupWebsocket, useHashedCSA, useHashState, usePlayerWindows } from './hooks';
 import { Group } from './group';
 import Schedule from './Schedule';
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const useAutoplay = (): [boolean, JSX.Element] => {
   const [autoplay, setAutoplay] = useHashState(true, 'autoplay');
@@ -275,7 +279,32 @@ const useGroupSelector = () => {
   };
 };
 
-function ToggleableDetails({
+function GenericToggleableDetails({
+  defaultOpen = true,
+  text,
+  className,
+  children,
+}: {
+  defaultOpen?: boolean;
+  text: string;
+  className: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <details className={className} open={open} onToggle={useCallback(e => setOpen(e.currentTarget.open), [])}>
+      <summary>{text}</summary>
+      <fieldset>
+        <legend>
+          <button onClick={useCallback(() => setOpen(open => !open), [])}>▼ {text}</button>
+        </legend>
+        {children}
+      </fieldset>
+    </details>
+  );
+}
+
+function MainToggleableDetails({
   defaultOpen = true,
   connectionStatus,
   children,
@@ -286,7 +315,7 @@ function ToggleableDetails({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <details open={open} onToggle={useCallback(e => setOpen(e.currentTarget.open), [])}>
+    <details className="main-controls" open={open} onToggle={useCallback(e => setOpen(e.currentTarget.open), [])}>
       <summary className="connectionIndicator" data-status={connectionStatus}>
         Controls
       </summary>
@@ -318,8 +347,14 @@ function UptimeTicker({ started }: { started: number | null }) {
 }
 
 function App() {
-  const { selectedUsernames, selectedGroups, additionalUsernames, GroupSelectorElement, connectionStatus } =
-    useGroupSelector();
+  const {
+    selectedUsernames,
+    selectedGroups,
+    additionalUsernames,
+    GroupSelectorElement,
+    connectionStatus,
+    profileIcons,
+  } = useGroupSelector();
 
   const [toggleJoyride, JoyrideElement] = useJoyride();
   const [autoplay, AutoplayElement] = useAutoplay();
@@ -353,11 +388,63 @@ function App() {
     [selectedUsernames, additionalUsernames],
   );
 
+  const [missedMessages, setMissedMessages] = useState<Record<string, number>>({});
+
+  // TODO - dont use state for this
+  const [tmiInstance, setTMIInstance] = useState<tmi.Client | null>(() => {
+    const instance = new tmi.Client({ options: { skipMembership: true, skipUpdatingEmotesets: true, debug: true } });
+    instance.connect();
+    return instance;
+  });
+
+  if (selectedChat in missedMessages)
+    setMissedMessages(missed => {
+      const newMissed = { ...missed };
+      delete newMissed[selectedChat];
+      return newMissed;
+    });
+
+  useEffect(() => {
+    if (!tmiInstance) return;
+
+    tmiInstance.on('chat', (channel, userstate, message, self) => {
+      if (self) return;
+      if (channel === selectedChat) return;
+      setMissedMessages(missed => ({
+        ...missed,
+        [channel.slice(1)]: (missed[channel.slice(1)] || 0) + 1,
+      }));
+    });
+
+    let mounted = true;
+    (async () => {
+      const joinedChannels = tmiInstance.getChannels().map(channel => channel.slice(1));
+      for (const joinedChannel of joinedChannels) {
+        if (!displayingUsernames.includes(joinedChannel)) {
+          await delay(2000);
+          if (!mounted) return;
+          tmiInstance.part(joinedChannel);
+        }
+      }
+      for (const username of displayingUsernames) {
+        if (!joinedChannels.includes(username)) {
+          await delay(2000);
+          if (!mounted) return;
+          tmiInstance.join(username);
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+      tmiInstance.removeAllListeners('chat');
+    };
+  }, [tmiInstance, selectedChat, displayingUsernames]);
+
   return (
     <>
       {JoyrideElement}
       {schedule ? <Schedule usernames={requestedUsernames} /> : null}
-      <ToggleableDetails defaultOpen={!selectedGroups.length} connectionStatus={connectionStatus}>
+      <MainToggleableDetails defaultOpen={!selectedGroups.length} connectionStatus={connectionStatus}>
         {GroupSelectorElement}
         <div>
           {PopoutElement}
@@ -367,15 +454,14 @@ function App() {
             {schedule ? 'Hide' : 'Show'} Schedule
           </button>
         </div>
-      </ToggleableDetails>
+      </MainToggleableDetails>
       <section className="content">
         <div className="players" data-count={players.length}>
           {players.map((username, i) => (
-            <div className="player-wrapper" style={{ gridArea: String.fromCharCode(97 + i) }}>
+            <div className="player-wrapper" style={{ gridArea: String.fromCharCode(97 + i) }} key={username}>
               <UptimeTicker started={onlineUsernames.find(online => online.username === username)?.started || null} />
               <iframe
                 title={username}
-                key={username}
                 src={
                   `https://embed.twitch.tv/?allowfullscreen=true&channel=${username}&layout=video&theme=dark&autoplay=${autoplay}&parent=` +
                   TWITCH_PARENT
@@ -387,15 +473,27 @@ function App() {
         </div>
         <div className="chats" data-open={!!selectedChat}>
           {displayingUsernames.length ? (
-            <div>
-              <select value={selectedChat} onInput={updateSelectedChat}>
-                <option value="">None</option>
-                {displayingUsernames.map(username => (
-                  <option key={username}>{username}</option>
+            <GenericToggleableDetails text="Chat" defaultOpen={true} className="chat-controls">
+              <div>
+                <select value={selectedChat} onInput={updateSelectedChat}>
+                  <option value="">None</option>
+                  {displayingUsernames.map(username => (
+                    <option key={username}>{username}</option>
+                  ))}
+                </select>
+                {selectedChat ? <button onClick={togglePoppedOut}>Pop Out</button> : null}
+              </div>
+              <ul>
+                {[...displayingUsernames].map(username => (
+                  <li key={username} data-selected={selectedChat === username} className="channel-chat-circle">
+                    <button onClick={() => setSelectedChat(username)}>
+                      {missedMessages[username] ? <span>{missedMessages[username]}</span> : null}
+                      <img src={profileIcons[username]} alt={username} title={username} />
+                    </button>
+                  </li>
                 ))}
-              </select>
-              {selectedChat ? <button onClick={togglePoppedOut}>Pop Out</button> : null}
-            </div>
+              </ul>
+            </GenericToggleableDetails>
           ) : null}
           {displayingUsernames.map(username => (
             <iframe
