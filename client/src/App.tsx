@@ -1,5 +1,5 @@
 import './App.css';
-import React, { useState, useEffect, useMemo, useCallback, useDebugValue, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useDebugValue, useRef, CSSProperties } from 'react';
 import Joyride, { ACTIONS, CallBackProps } from 'react-joyride';
 
 import 'react-checkbox-tree/lib/react-checkbox-tree.css';
@@ -485,10 +485,19 @@ function App() {
               </div>
               <ul>
                 {[...displayingUsernames].map(username => (
-                  <li key={username} data-selected={selectedChat === username} className="channel-chat-circle">
-                    <button onClick={() => setSelectedChat(username)}>
+                  <li
+                    key={username}
+                    data-selected={selectedChat === username}
+                    data-has-count={!!missedMessages[username]}
+                    className="channel-chat-circle"
+                  >
+                    <button
+                      onClick={() => setSelectedChat(username)}
+                      title={username}
+                      style={{ '--background-image': 'url(' + profileIcons[username] + ')' } as CSSProperties}
+                      key={missedMessages[username]}
+                    >
                       {missedMessages[username] ? <span>{missedMessages[username]}</span> : null}
-                      <img src={profileIcons[username]} alt={username} title={username} />
                     </button>
                   </li>
                 ))}

@@ -109,35 +109,54 @@
 }
 
 .channel-chat-circle {
-  position: relative;
   flex: 1;
   width: 4vw;
   text-align: center;
 }
 
-.channel-chat-circle img {
-  width: 4vw;
-  border-radius: 100%;
-  outline: 1px solid grey;
-}
 
 .channel-chat-circle button {
   all: unset;
   cursor: pointer;
+  width: 4vw;
+  height: 4vw;
+  border-radius: 100%;
+  outline: 2px solid grey;
+	transition: all 0.5s;
+  background-image: var(--background-image);
+  background-size: contain;
+  background-repeat: no-repeat;
+  position: relative;
 }
 
-.channel-chat-circle[data-selected="true"] img {
-  outline: 3px solid lime;
+.channel-chat-circle[data-selected="true"] button {
+  outline: 2px solid lime;
+}
+
+.channel-chat-circle[data-has-count="true"] button {
+	border-top-right-radius: 5px;
+  animation: fade 15s forwards;
 }
 
 .channel-chat-circle span {
   position: absolute;
   top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: rgba(0, 0, 0, 0.8);
-  border-radius: 100%;
-  padding: .1rem;
+  right: 0.1rem;
+  color: #fff;
+	font-size: 1rem;
+	font-weight: bold;
+	transition: all 0.3s;
+  -webkit-text-stroke: 1px black;
+  border-bottom-left-radius: 1rem;
+}
+
+@keyframes fade {
+  from {
+    outline: 2px solid aqua;
+  }
+  to {
+    outline: 2px solid grey;
+  }
 }
 
 iframe {
