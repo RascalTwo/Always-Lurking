@@ -159,6 +159,14 @@
   }
 }
 
+button[data-filtering="false"] {
+  color: grey;
+}
+
+button[data-filtering="true"] {
+  color: black;
+}
+
 iframe {
   width: 100%;
   height: 100%;

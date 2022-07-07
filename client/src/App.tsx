@@ -388,6 +388,8 @@ function App() {
     [selectedUsernames, additionalUsernames],
   );
 
+  const [chatFilter, setChatFilter] = useState('')
+
   const [missedMessages, setMissedMessages] = useState<Record<string, number>>({});
 
   // TODO - dont use state for this
@@ -410,6 +412,7 @@ function App() {
     tmiInstance.on('chat', (channel, userstate, message, self) => {
       if (self) return;
       if (channel === selectedChat) return;
+      if (!message.toLowerCase().includes(chatFilter.toLowerCase())) return;
       setMissedMessages(missed => ({
         ...missed,
         [channel.slice(1)]: (missed[channel.slice(1)] || 0) + 1,
@@ -438,7 +441,12 @@ function App() {
       mounted = false;
       tmiInstance.removeAllListeners('chat');
     };
-  }, [tmiInstance, selectedChat, displayingUsernames]);
+  }, [tmiInstance, selectedChat, displayingUsernames, chatFilter]);
+
+  const updateChatFilter = useCallback(e => {
+    setChatFilter(prompt('Filter Text') ?? '');
+    setMissedMessages({});
+  }, [setChatFilter, setMissedMessages]);
 
   return (
     <>
@@ -475,6 +483,7 @@ function App() {
           {displayingUsernames.length ? (
             <GenericToggleableDetails text="Chat" defaultOpen={true} className="chat-controls">
               <div>
+                <button onClick={updateChatFilter} data-filtering={chatFilter !== ''} aria-label="Update Chat Filter">Filter</button>
                 <select value={selectedChat} onInput={updateSelectedChat}>
                   <option value="">None</option>
                   {displayingUsernames.map(username => (
