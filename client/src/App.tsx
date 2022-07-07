@@ -443,10 +443,13 @@ function App() {
     };
   }, [tmiInstance, selectedChat, displayingUsernames, chatFilter]);
 
-  const updateChatFilter = useCallback(e => {
-    setChatFilter(prompt('Filter Text') ?? '');
-    setMissedMessages({});
-  }, [setChatFilter, setMissedMessages]);
+  const updateChatFilter = useCallback(
+    e => {
+      setChatFilter(prompt('Filter Text') ?? '');
+      setMissedMessages({});
+    },
+    [setChatFilter, setMissedMessages],
+  );
 
   return (
     <>
@@ -483,7 +486,9 @@ function App() {
           {displayingUsernames.length ? (
             <GenericToggleableDetails text="Chat" defaultOpen={true} className="chat-controls">
               <div>
-                <button onClick={updateChatFilter} data-filtering={chatFilter !== ''} aria-label="Update Chat Filter">Filter</button>
+                <button onClick={updateChatFilter} data-filtering={chatFilter !== ''} aria-label="Update Chat Filter">
+                  Filter
+                </button>
                 <select value={selectedChat} onInput={updateSelectedChat}>
                   <option value="">None</option>
                   {displayingUsernames.map(username => (
@@ -493,23 +498,27 @@ function App() {
                 {selectedChat ? <button onClick={togglePoppedOut}>Pop Out</button> : null}
               </div>
               <ul>
-                {[...displayingUsernames].map(username => (
-                  <li
-                    key={username}
-                    data-selected={selectedChat === username}
-                    data-has-count={!!missedMessages[username]}
-                    className="channel-chat-circle"
-                  >
-                    <button
-                      onClick={() => setSelectedChat(username)}
-                      title={username}
-                      style={{ '--background-image': 'url(' + profileIcons[username] + ')' } as CSSProperties}
-                      key={missedMessages[username]}
+                {[...displayingUsernames].map(username => {
+                  const started = onlineUsernames.find(online => online.username === username)?.started || Date.now();
+                  const elapsed = new Date(started ? Date.now() - started : 0).toISOString().substr(11, 8);
+                  return (
+                    <li
+                      key={username}
+                      data-selected={selectedChat === username}
+                      data-has-count={!!missedMessages[username]}
+                      className="channel-chat-circle"
                     >
-                      {missedMessages[username] ? <span>{missedMessages[username]}</span> : null}
-                    </button>
-                  </li>
-                ))}
+                      <button
+                        onClick={() => setSelectedChat(username)}
+                        title={username + ' - ' + elapsed}
+                        style={{ '--background-image': 'url(' + profileIcons[username] + ')' } as CSSProperties}
+                        key={missedMessages[username]}
+                      >
+                        {missedMessages[username] ? <span>{missedMessages[username]}</span> : null}
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             </GenericToggleableDetails>
           ) : null}
