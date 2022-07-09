@@ -397,6 +397,8 @@ function App() {
     setMissedMessages({});
   }, [setChatFilter, setMissedMessages]);
 
+  const onChannelChatCircleClick = useCallback((channel: string) => setSelectedChat(old => old === channel ? '' : channel), [setSelectedChat]);
+
   return (
     <>
       {JoyrideElement}
@@ -459,7 +461,7 @@ function App() {
                 {selectedChat ? <button onClick={togglePoppedOut}>Pop Out</button> : null}
               </div>
               {monitoringChat ? (
-                <ul>
+                <ul className="channel-circle-list">
                   {[...displayingUsernames].map(username => (
                     <ChannelChatCircle
                       key={username}
@@ -474,7 +476,7 @@ function App() {
                       }
                       missedCount={missedMessages[username] || 0}
                       imageURL={profileIcons[username]}
-                      onClick={setSelectedChat}
+                      onClick={onChannelChatCircleClick}
                     />
                   ))}
                 </ul>
@@ -489,6 +491,28 @@ function App() {
               src={'https://www.twitch.tv/embed/' + username + '/chat?darkpopout&parent=' + TWITCH_PARENT}
             />
           ))}
+
+          {monitoringChat ? (
+            <ul className="mini-channel-circle-list">
+              {[...displayingUsernames].map(username => (
+                <ChannelChatCircle
+                  key={username}
+                  username={username}
+                  started={onlineUsernames.find(online => online.username === username)?.started || Date.now()}
+                  isSelected={selectedChat === username}
+                  isConnected={
+                    tmiInstance
+                      ?.getChannels()
+                      .map(channel => channel.slice(1))
+                      .includes(username) ?? false
+                  }
+                  missedCount={missedMessages[username] || 0}
+                  imageURL={profileIcons[username]}
+                  onClick={onChannelChatCircleClick}
+                />
+              ))}
+            </ul>
+          ) : null}
         </div>
       </section>
     </>

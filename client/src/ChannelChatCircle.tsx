@@ -1,4 +1,4 @@
-import { CSSProperties } from 'react';
+import { CSSProperties, useCallback } from 'react';
 
 interface ChannelChatCircleProps {
   started: number;
@@ -7,7 +7,7 @@ interface ChannelChatCircleProps {
   missedCount: number;
   imageURL: string;
   username: string;
-  onClick: React.Dispatch<React.SetStateAction<string>>;
+  onClick: (username: string) => void;
 }
 
 export default function ChannelChatCircle({
@@ -28,7 +28,7 @@ export default function ChannelChatCircle({
       className="channel-chat-circle"
     >
       <button
-        onClick={() => onClick(username)}
+        onClick={useCallback(() => onClick(username), [username, onClick])}
         title={username + ' - ' + elapsed}
         style={{ '--background-image': 'url(' + imageURL + ')' } as CSSProperties}
         key={missedCount}

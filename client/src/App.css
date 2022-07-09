@@ -99,18 +99,20 @@
   top: 0;
 }
 
+.channel-circle-list {
+  gap: 0.5rem;
+}
+
 .chats ul {
   list-style: none;
   display: flex;
   flex-wrap: wrap;
   margin: 0;
   padding: 0;
-  gap: .1rem;
 }
 
 .channel-chat-circle {
   flex: 1;
-  width: 4vw;
   text-align: center;
 }
 
@@ -154,6 +156,20 @@
   border-bottom-left-radius: 1rem;
 }
 
+.mini-channel-circle-list {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mini-channel-circle-list button {
+  width: 2vw;
+  height: 2vw;
+}
+
 @keyframes fade {
   from {
     outline: 2px solid aqua;
@@ -185,12 +201,22 @@ iframe[data-selected="true"] {
   display: block;
 }
 
+details {
+  position: absolute;
+  z-index: 1;
+}
+
+details[open] fieldset {
+  background-color: black;
+}
+
 details[open] summary {
   display: none;
 }
 
 summary, legend {
   cursor: pointer;
+  user-select: none;
   text-decoration: underline;
 }
 
@@ -247,11 +273,10 @@ fieldset > legend > button {
 .main-controls > summary, .main-controls legend {
   background-color: red;
   color: white;
-  padding: 0.135rem 0.5rem;
+  padding: 0 0.5rem;
   border-radius: 1rem;
   text-decoration: none;
   width: max-content;
-  user-select: none;
 }
 
 .main-controls > summary {
@@ -261,6 +286,19 @@ fieldset > legend > button {
 .main-controls[data-status="Open"] > summary, .main-controls[data-status="Open"] legend{
   background-color: lime;
   color: black;
+}
+
+.chat-controls {
+  top: 0;
+  right: 0;
+}
+
+.chat-controls {
+  margin-right: 3rem;
+}
+
+.chat-controls summary {
+  margin-right: 1rem;
 }
 
 .chat-controls legend {

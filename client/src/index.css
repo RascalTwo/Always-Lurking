@@ -7,8 +7,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: black;
   color: white;
-  height: 95vh;
-  width: 95vw;
+  height: 99vh;
+  width: 99vw;
   margin: auto;
   overflow: hidden;
 }
@@ -19,7 +19,7 @@ code {
 }
 
 #root {
-  height: 95vh;
+  height: 99vh;
   display: flex;
   flex-direction: column;
 }
