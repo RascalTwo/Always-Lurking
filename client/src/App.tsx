@@ -11,6 +11,9 @@ import { TWITCH_PARENT } from './constants';
 import { useGroups, useGroupWebsocket, useHashedCSA, useHashState, usePlayerWindows } from './hooks';
 import { Group } from './group';
 import Schedule from './Schedule';
+import { UptimeTicker } from './UptimeTicker';
+import GenericToggleableDetails from './TogglableDetails';
+import ChannelChatCircle from './ChannelChatCircle';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -279,73 +282,6 @@ const useGroupSelector = () => {
   };
 };
 
-function GenericToggleableDetails({
-  defaultOpen = true,
-  text,
-  className,
-  children,
-}: {
-  defaultOpen?: boolean;
-  text: string;
-  className: string;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <details className={className} open={open} onToggle={useCallback(e => setOpen(e.currentTarget.open), [])}>
-      <summary>{text}</summary>
-      <fieldset>
-        <legend>
-          <button onClick={useCallback(() => setOpen(open => !open), [])}>▼ {text}</button>
-        </legend>
-        {children}
-      </fieldset>
-    </details>
-  );
-}
-
-function MainToggleableDetails({
-  defaultOpen = true,
-  connectionStatus,
-  children,
-}: {
-  defaultOpen?: boolean;
-  connectionStatus: string;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <details className="main-controls" open={open} onToggle={useCallback(e => setOpen(e.currentTarget.open), [])}>
-      <summary className="connectionIndicator" data-status={connectionStatus}>
-        Controls
-      </summary>
-      <fieldset>
-        <legend className="connectionIndicator" data-status={connectionStatus}>
-          <button onClick={useCallback(() => setOpen(open => !open), [])}>▼ Controls</button>
-        </legend>
-        {children}
-      </fieldset>
-    </details>
-  );
-}
-
-function UptimeTicker({ started }: { started: number | null }) {
-  const [elapsed, setElapsed] = useState(() => (started ? Date.now() - started : 0));
-  useEffect(() => {
-    if (!started) return;
-    const interval = setInterval(() => setElapsed(elapsed => elapsed + 1000), 1000);
-    return () => clearInterval(interval);
-  }, [started]);
-
-  if (!started) return null;
-
-  return (
-    <time dateTime={new Date(started).toISOString()} className="uptime">
-      {new Date(elapsed).toISOString().substr(11, 8)}
-    </time>
-  );
-}
-
 function App() {
   const {
     selectedUsernames,
@@ -390,7 +326,7 @@ function App() {
 
   const [monitoringChat, setMonitoringChat] = useHashState(true, 'monitoringChat');
 
-  const [chatFilter, setChatFilter] = useState('')
+  const [chatFilter, setChatFilter] = useState('');
 
   const [missedMessages, setMissedMessages] = useState<Record<string, number>>({});
 
@@ -465,7 +401,12 @@ function App() {
     <>
       {JoyrideElement}
       {schedule ? <Schedule usernames={requestedUsernames} /> : null}
-      <MainToggleableDetails defaultOpen={!selectedGroups.length} connectionStatus={connectionStatus}>
+      <GenericToggleableDetails
+        defaultOpen={!selectedGroups.length}
+        text="Controls"
+        className="main-controls"
+        data-status={connectionStatus}
+      >
         {GroupSelectorElement}
         <div>
           {PopoutElement}
@@ -483,7 +424,7 @@ function App() {
             {schedule ? 'Hide' : 'Show'} Schedule
           </button>
         </div>
-      </MainToggleableDetails>
+      </GenericToggleableDetails>
       <section className="content">
         <div className="players" data-count={players.length}>
           {players.map((username, i) => (
@@ -519,28 +460,23 @@ function App() {
               </div>
               {monitoringChat ? (
                 <ul>
-                  {[...displayingUsernames].map(username => {
-                    const started = onlineUsernames.find(online => online.username === username)?.started || Date.now();
-                    const elapsed = new Date(started ? Date.now() - started : 0).toISOString().substr(11, 8);
-                    return (
-                      <li
-                        key={username}
-                        data-selected={selectedChat === username}
-                        data-has-count={!!missedMessages[username]}
-                        data-is-connected={tmiInstance?.getChannels().map(channel => channel.slice(1)).includes(username)}
-                        className="channel-chat-circle"
-                      >
-                        <button
-                          onClick={() => setSelectedChat(username)}
-                          title={username + ' - ' + elapsed}
-                          style={{ '--background-image': 'url(' + profileIcons[username] + ')' } as CSSProperties}
-                          key={missedMessages[username]}
-                        >
-                          {missedMessages[username] ? <span>{missedMessages[username]}</span> : null}
-                        </button>
-                      </li>
-                    );
-                  })}
+                  {[...displayingUsernames].map(username => (
+                    <ChannelChatCircle
+                      key={username}
+                      username={username}
+                      started={onlineUsernames.find(online => online.username === username)?.started || Date.now()}
+                      isSelected={selectedChat === username}
+                      isConnected={
+                        tmiInstance
+                          ?.getChannels()
+                          .map(channel => channel.slice(1))
+                          .includes(username) ?? false
+                      }
+                      missedCount={missedMessages[username] || 0}
+                      imageURL={profileIcons[username]}
+                      onClick={setSelectedChat}
+                    />
+                  ))}
                 </ul>
               ) : null}
             </GenericToggleableDetails>

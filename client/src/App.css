@@ -244,7 +244,7 @@ fieldset > legend > button {
   color: black;
 }
 
-.connectionIndicator {
+.main-controls > summary, .main-controls legend {
   background-color: red;
   color: white;
   padding: 0.135rem 0.5rem;
@@ -254,11 +254,11 @@ fieldset > legend > button {
   user-select: none;
 }
 
-summary.connectionIndicator {
+.main-controls > summary {
   margin-left: 1rem;
 }
 
-.connectionIndicator[data-status="Open"]{
+.main-controls[data-status="Open"] > summary, .main-controls[data-status="Open"] legend{
   background-color: lime;
   color: black;
 }
