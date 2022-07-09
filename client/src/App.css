@@ -138,6 +138,10 @@
   animation: fade 15s forwards;
 }
 
+.channel-chat-circle:not([data-is-connected="true"]) button {
+  outline: 2px solid red;
+}
+
 .channel-chat-circle span {
   position: absolute;
   top: 0;
