@@ -325,10 +325,11 @@ function App() {
   );
 
   const [monitoringChat, setMonitoringChat] = useHashState(true, 'monitoringChat');
+  const [viewingMiniChatMessages, setViewingMiniChatMessages] = useHashState(true, 'viewingMiniChatMessages');
 
   const [chatFilter, setChatFilter] = useState('');
 
-  const [missedMessages, setMissedMessages] = useState<Record<string, number>>({});
+  const [missedMessages, setMissedMessages] = useState<Record<string, { username: string; message: string }[]>>({});
 
   if (!monitoringChat && Object.keys(missedMessages).length) setMissedMessages({});
 
@@ -364,7 +365,10 @@ function App() {
       if (!message.toLowerCase().includes(chatFilter.toLowerCase())) return;
       setMissedMessages(missed => ({
         ...missed,
-        [channel.slice(1)]: (missed[channel.slice(1)] || 0) + 1,
+        [channel.slice(1)]: [
+          ...(missed[channel.slice(1)] || []),
+          { username: userstate['display-name'] || userstate.username!, message },
+        ],
       }));
     });
 
@@ -421,6 +425,14 @@ function App() {
               onChange={e => setMonitoringChat(e.currentTarget.checked)}
             />
           </label>
+          <label>
+            View Mini Chat Messages
+            <input
+              type="checkbox"
+              checked={viewingMiniChatMessages}
+              onChange={e => setViewingMiniChatMessages(e.currentTarget.checked)}
+            />
+          </label>
           <button onClick={toggleJoyride}>Help</button>
           <button onClick={useCallback(() => setSchedule(schedule => !schedule), [setSchedule])}>
             {schedule ? 'Hide' : 'Show'} Schedule
@@ -474,7 +486,7 @@ function App() {
                           .map(channel => channel.slice(1))
                           .includes(username) ?? false
                       }
-                      missedCount={missedMessages[username] || 0}
+                      missedCount={missedMessages[username]?.length || 0}
                       imageURL={profileIcons[username]}
                       onClick={onChannelChatCircleClick}
                     />
@@ -495,21 +507,27 @@ function App() {
           {monitoringChat ? (
             <ul className="mini-channel-circle-list">
               {[...displayingUsernames].map(username => (
-                <ChannelChatCircle
-                  key={username}
-                  username={username}
-                  started={onlineUsernames.find(online => online.username === username)?.started || Date.now()}
-                  isSelected={selectedChat === username}
-                  isConnected={
-                    tmiInstance
-                      ?.getChannels()
-                      .map(channel => channel.slice(1))
-                      .includes(username) ?? false
-                  }
-                  missedCount={missedMessages[username] || 0}
-                  imageURL={profileIcons[username]}
-                  onClick={onChannelChatCircleClick}
-                />
+                <li key={username}>
+                  {viewingMiniChatMessages && missedMessages[username]?.length ? (
+                    <div key={missedMessages[username]?.length} className="mini-message">
+                      {missedMessages[username]?.at(-1)?.username}: {missedMessages[username]?.at(-1)?.message}
+                    </div>
+                  ) : null}
+                  <ChannelChatCircle
+                    username={username}
+                    started={onlineUsernames.find(online => online.username === username)?.started || Date.now()}
+                    isSelected={selectedChat === username}
+                    isConnected={
+                      tmiInstance
+                        ?.getChannels()
+                        .map(channel => channel.slice(1))
+                        .includes(username) ?? false
+                    }
+                    missedCount={missedMessages[username]?.length || 0}
+                    imageURL={profileIcons[username]}
+                    onClick={onChannelChatCircleClick}
+                  />
+                </li>
               ))}
             </ul>
           ) : null}

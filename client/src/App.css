@@ -158,16 +158,65 @@
 
 .mini-channel-circle-list {
   position: absolute;
-  top: 0;
+  top: 1rem;
   right: 0;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
+.mini-channel-circle-list > li {
+  position: relative;
+}
+
+.mini-channel-circle-list > li > div {
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.9);
+  border: 2px solid grey;
+  border-right: none;;
+  height: 25px;
+  padding: 0.25rem;
+  padding-right: 1rem;
+  border-radius: 1rem 0 0 1rem;
+  top: 52%;
+  transform: translateY(-50%);
+  right: 50%;
+}
+
 .mini-channel-circle-list button {
-  width: 2vw;
-  height: 2vw;
+  width: 35px;
+  height: 35px;
+}
+
+.mini-message {
+  max-width: 50vw;
+  white-space: nowrap;
+  animation: chat-fade 7.5s forwards;
+}
+
+@keyframes chat-fade {
+  0% {
+    visibility: hidden;
+    opacity: 0;
+    right: -100vw;
+  }
+  20% {
+    visibility: visible;
+    opacity: .9;
+    right: 50%;
+  }
+  50% {
+    opacity: 1;
+  }
+  80% {
+    opacity: .9;
+    right: 50%;
+  }
+  100% {
+    visibility: hidden;
+    opacity: 0;
+    right: -100vw;
+  }
 }
 
 @keyframes fade {
