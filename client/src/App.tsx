@@ -406,7 +406,7 @@ function App() {
   return (
     <>
       {JoyrideElement}
-      {schedule ? <Schedule usernames={requestedUsernames} /> : null}
+      {schedule ? <Schedule usernames={requestedUsernames} profileIcons={profileIcons} /> : null}
       <GenericToggleableDetails
         defaultOpen={!selectedGroups.length}
         text="Controls"
